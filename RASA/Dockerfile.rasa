@@ -13,5 +13,7 @@ COPY requirements.txt .
 # Install everything globally (NO venv)
 RUN pip install --upgrade pip && pip install --no-cache-dir rasa==3.6.21 -r requirements.txt
 
+RUN rasa train
+
 # Run Rasa shell
 CMD ["rasa", "shell"]

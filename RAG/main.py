@@ -47,10 +47,6 @@ async def stream_response(request: Request):
 
     return StreamingResponse(token_generator(), media_type="text/event-stream")
 
-
-
-    return StreamingResponse(stream_ollama_response(), media_type="text/event-stream")
-
 # Endpoint
 @app.post("/query")
 async def query(request: Request):
