@@ -47,7 +47,7 @@ responses:
   - text: "you will be considered an irregular student. Completing the requirements for an INC or NC does not automatically mean you’ve passed the course. You must fulfill the necessary requirements to clear the mark before continuing in your program."
 
   utter_failing_gened:
-  - text: "you would be considered an irregular student as long as you have a failed general education subject. To track the regular offering of your program and understand the proper course progression, please refer to your curriculum guide..
+  - text: "you would be considered an irregular student as long as you have a failed general education subject. To track the regular offering of your program and understand the proper course progression, please refer to your curriculum guide."
 
   utter_irreg_student_inquiry:
   - text: "You are required to enroll onsite. However, you may designate someone to enroll on your behalf. They will need to present an authorization letter, a copy of your student ID, and their own valid ID"
