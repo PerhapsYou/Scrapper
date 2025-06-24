@@ -5,10 +5,20 @@ services:
     build:
       context: ./RAG
       dockerfile: Dockerfile.rag
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
     ports:
       - "8000:8000"
+    depends_on:
+      - ollama
     volumes:
       - ./RAG:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   rasa_server:
     build:
@@ -35,6 +45,9 @@ services:
     build: 
       context: ./client
       dockerfile: Dockerfile.client
+    depends_on:
+      rag_server:
+        condition: service_healthy
     ports:
       - "8080:80"
 

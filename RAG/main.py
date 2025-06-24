@@ -1,74 +1,85 @@
 #RAG SERVER
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from langchain_community.embeddings import HuggingFaceEmbeddings
 import os # used to get user choice of LLM saved in device environment variable
-from fastapi.responses import StreamingResponse
+from contextlib import asynccontextmanager
 
 # local Imports
 from rag_pipeline import RAGPipeline  
 from build_vector_index import BuildVectorIndex
 
 # Build Knowledge. Can comment out this section if knowledge already built
-#build_vector_index = BuildVectorIndex()
-#build_vector_index.run()
+build_vector_index = BuildVectorIndex()
+build_vector_index.run()
+ 
+# Globals for FAISS and pipeline readiness
+rag_pipeline = None
+faiss_ready = False
 
+# Lifespan handler
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global rag_pipeline, faiss_ready
 
-# Initialize FastAPI app
-app = FastAPI()
+    try:
+        print("🚀 Building vector index if not already present...")
+        builder = BuildVectorIndex()
+        builder.run()
 
-# now user can choose between LLMs
-llm_backend = os.getenv("LLM_BACKEND", "ollama") 
-# Initialize RAG pipeline: now RAGPipelines has one argument llm_backend
-rag_pipeline = RAGPipeline(llm_backend="ollama")
+        print("📦 Loading RAG pipeline and FAISS index...")
+        llm_backend = os.getenv("LLM_BACKEND", "ollama")
+        rag_pipeline = RAGPipeline(llm_backend=llm_backend)
 
+        faiss_ready = True
+        print("✅ FAISS and LLM pipeline ready.")
+    except Exception as e:
+        print(f"❌ Failed during startup: {e}")
+        faiss_ready = False
 
-@app.get('/')
-def read_root():
-    return {"message": "Welcome to the RAG API. Use the /query endpoint to ask questions."}    
+    yield  # Server is now running
+
+    # Optional cleanup code here
+    print("🔻 Shutting down RAG server...")
+
+# Initialize FastAPI with lifespan handler
+app = FastAPI(lifespan=lifespan)
+
+@app.get("/health")
+def health():
+    if faiss_ready:
+        return {"status": "ok"}
+    return JSONResponse(status_code=503, content={"status": "loading"})
+
 
 @app.post("/chat/stream")
 async def stream_response(request: Request):
-    body = await request.json()
-    print("Received body:", body)  
+    if not faiss_ready:
+        return JSONResponse(status_code=503, content={"error": "Server not ready"})
 
-    # Extract query from tracker
+    body = await request.json()
     query = body.get("query", "")
 
     if not query:
-        return JSONResponse(
-            status_code=200,
-            content={"responses": [{"query": "No query found in message."}], "events": []}
-        )
-        
+        return JSONResponse(status_code=200, content={"responses": [{"query": "No query found in message."}], "events": []})
+
     async def token_generator():
         for token in rag_pipeline.get_ollama_stream(query):
             yield f"data: {token}\n\n"
 
     return StreamingResponse(token_generator(), media_type="text/event-stream")
 
-# Endpoint
+
 @app.post("/query")
 async def query(request: Request):
-    body = await request.json()
-    print("Received body:", body) 
+    if not faiss_ready:
+        return JSONResponse(status_code=503, content={"error": "Server not ready"})
 
-    # Extract query from tracker
+    body = await request.json()
     query = body.get("query", "")
 
     if not query:
-        return JSONResponse(
-            status_code=200,
-            content={"responses": [{"query": "No query found in message."}], "events": []}
-        )
+        return JSONResponse(status_code=200, content={"responses": [{"query": "No query found in message."}], "events": []})
 
-    # 👇 RAG PIPELINE IMPLE
     response = rag_pipeline.get_ollama_stream(query)
-    print(response)
-    response = JSONResponse(
-        status_code=200,
-        content={"response" : response.get("result", "no answer found.")} 
-        )
-    print(response)
-
-    return response
+    return JSONResponse(status_code=200, content={"response": response})

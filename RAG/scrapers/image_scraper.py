@@ -4,7 +4,6 @@ from pytesseract import pytesseract
 from pathlib import Path
 
 # Set paths
-path_to_tesseract = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 images_folder = "images"
 output_folder = "knowledge"
 output_file = os.path.join(output_folder, "extractedImageTexts.txt")
