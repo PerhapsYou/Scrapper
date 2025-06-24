@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
 from concurrent.futures import ThreadPoolExecutor
 import logging
+from slugify import slugify  
 
 
 # Setup logging
@@ -104,51 +105,59 @@ def download_assets(html, base_url, output_folder="knowledge"):
     os.makedirs(output_folder, exist_ok=True)
     soup = BeautifulSoup(html, "lxml")
     
+    # Download files from <a href=...>
     for tag in soup.find_all("a", href=True):
         href = tag["href"]
         file_url = urljoin(base_url, href)
         if any(file_url.lower().endswith(ext) for ext in [".pdf", ".png", ".jpg", ".jpeg", ".bmp", ".tiff"]):
-            try:
-                response = requests.get(file_url, headers=HEADERS, timeout=10)
-                response.raise_for_status()
-                filename = os.path.basename(urlparse(file_url).path)
-                with open(os.path.join(output_folder, filename), "wb") as f:
-                    f.write(response.content)
-                logging.info(f"Downloaded: {filename}")
-            except Exception as e:
-                logging.warning(f"Failed to download {file_url}: {e}")
+            _download_file(file_url, output_folder)
+
+    # ✅ Download from <img src=...>
+    for img in soup.find_all("img", src=True):
+        src = img["src"]
+        file_url = urljoin(base_url, src)
+        if any(file_url.lower().endswith(ext) for ext in [".png", ".jpg", ".jpeg", ".bmp", ".tiff"]):
+            _download_file(file_url, output_folder)
+
 # ==========================
 
-# Save parsed data to txt
-def save_to_txt(parsed_data_list, domain_name, output_dir="knowledge"):
-    
-    output_dir = os.path.join("knowledge")
+def _download_file(file_url, output_folder):
+    try:
+        response = requests.get(file_url, headers=HEADERS, timeout=10)
+        response.raise_for_status()
+        filename = os.path.basename(urlparse(file_url).path)
+        with open(os.path.join(output_folder, filename), "wb") as f:
+            f.write(response.content)
+        logging.info(f"Downloaded: {filename}")
+    except Exception as e:
+        logging.warning(f"Failed to download {file_url}: {e}")
+
+def save_to_txt(parsed_data_list, url, output_dir="knowledge"):
     os.makedirs(output_dir, exist_ok=True)
 
-    filepath = os.path.join(output_dir, f"{domain_name}.txt")
-    print(f"[Save] Writing data to file: {filepath}")
+    domain = urlparse(url).netloc.replace("www.", "")
+    path = urlparse(url).path or ""
+    profile_id = slugify(path.strip("/")) or "root"
+
+    filename = f"{domain}__{profile_id}.txt"
+    filepath = os.path.join(output_dir, filename)
+
+    logging.info(f"[Save] Writing data to file: {filepath}")
 
     with open(filepath, "w", encoding="utf-8") as f:
         for entry in parsed_data_list:
-            # Write H1 (main title), if any
             for heading in entry["headings"].get("h1", []):
                 f.write(f"{heading.strip()}\n\n")
-
-            # Optionally write H2 and H3 headings
             for h_level in ["h2", "h3"]:
                 for heading in entry["headings"].get(h_level, []):
                     f.write(f"{heading.strip()}\n\n")
-
-            # Write all paragraphs
             for paragraph in entry["paragraphs"]:
                 f.write(f"{paragraph.strip()}\n\n")
-
-            # Write FAQs (question + answer)
             for faq in entry["faqs"]:
                 question = faq["question"].strip()
                 answer = faq["answer"].strip()
                 f.write(f"{question}\n{answer}\n\n")
-
+                
 def run_scraper(urls_path="urls.txt", output_dir="knowledge", depth=2):
     from urllib.parse import urlparse
 
@@ -159,7 +168,7 @@ def run_scraper(urls_path="urls.txt", output_dir="knowledge", depth=2):
         logging.info(f"[Start] Scraping: {url}")
         scraped_data = crawl(url, depth=depth)
         domain = urlparse(url).netloc.replace("www.", "")
-        save_to_txt(scraped_data, domain, output_dir=output_dir)
+        save_to_txt(scraped_data, url, output_dir=output_dir)
         logging.info(f"[Success] Data from {url} saved to {output_dir}/{domain}.txt")
 
 def main():
@@ -175,7 +184,7 @@ def main():
         logging.debug("Fetched HTML from %s", url)
 
         domain = urlparse(url).netloc.replace("www.", "")
-        save_to_txt(scraped_data, domain)
+        save_to_txt(scraped_data, url)
 
         print(f"[Success] Data from {url} saved to data/{domain}.txt\n")
         

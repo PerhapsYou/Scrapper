@@ -3,6 +3,8 @@ from PIL import Image
 from pytesseract import pytesseract
 from pathlib import Path
 
+Image.MAX_IMAGE_PIXELS = None  # Disable decompression bomb warning
+
 # Set paths
 images_folder = "images"
 output_folder = "knowledge"

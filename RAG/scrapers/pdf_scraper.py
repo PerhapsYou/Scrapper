@@ -66,5 +66,8 @@ def scan_all_pdfs():
                 
 # Optional: for standalone execution
 if __name__ == "__main__":
-    scan_all_pdfs()
+    try:
+        scan_all_pdfs()
+    except Exception as e:
+        print(f"[FATAL ERROR] PDF scanning failed: {e}")
 
