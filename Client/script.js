@@ -518,3 +518,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+//stop button
+document.addEventListener("DOMContentLoaded", () => {
+    const stopBtn = document.getElementById("stopBtn");
+    stopBtn.addEventListener("click", () => {
+        fetch("/stop", {
+            method: "POST"
+        })
+        .then(res => res.json())
+        .then(data => {
+            console.log("Stop requested:", data);
+            document.getElementById("typingIndicator").style.display = "none"; // hide typing
+        })
+        .catch(err => {
+            console.error("Stop request failed:", err);
+        });
+    });
+});
