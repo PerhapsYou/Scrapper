@@ -33,8 +33,6 @@ rules:
   - intent: out_of_scope
   - action: action_rag_fallback
 
-# Christian 19 JUN =======
-# added rules
 - rule: Say 'Onsite for undergrad progs and Hyflex for graduate students' everytime the user asks about the mode of learning
   steps:
   - intent: learning_mode
@@ -124,4 +122,3 @@ rules:
   steps:
   - intent: window_10_clearance
   - action: utter_window_10_clearance
-# ========================

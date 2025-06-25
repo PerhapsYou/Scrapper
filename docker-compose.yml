@@ -42,9 +42,6 @@ services:
   ollama:
     image: ollama/ollama
     container_name: ollama
-    runtime: nvidia
-    environment:
-      - NVIDIA_VISIBLE_DEVICES=all
     ports:
       - "11434:11434"  # Ollama API port
     volumes:

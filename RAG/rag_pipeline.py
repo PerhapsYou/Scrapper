@@ -15,7 +15,7 @@ class RAGPipeline:
             self.embedding,
             allow_dangerous_deserialization=True
         )
-        self.retriever = self.vector_store.as_retriever(search_kwargs={"k": 2})
+        self.retriever = self.vector_store.as_retriever()
 
         # Select LLM backend
         print("✅ Using Ollama (llama3) as LLM")
@@ -32,15 +32,13 @@ class RAGPipeline:
     def get_ollama_stream(self, question: str):
         start = time.time()
 
-        # ⛔ FAISS retrieval - this is the potential slow part
         docs = self.retriever.get_relevant_documents(question)
 
-        print(f"🔍 FAISS retrieval took: {round(time.time() - start, 2)}s")
+        print(f"FAISS retrieval took: {round(time.time() - start, 2)}s")
 
-        # ⛔ Build context
         context = "\n\n".join(doc.page_content for doc in docs)
-        prompt = f"Use the context below to answer the question.\n\nContext: {context}\n\nQuestion: {question}"
+        print(context)
+        prompt = f"Use the context below to answer the question.\n\nContext: {context}\n\nQuestion: {question}. Do not say context just give me an answer. If you do not know just apologize and say you do not know.."
 
-        # ✅ Stream LLM response
         for chunk in self.llmModel.stream(prompt):
             yield chunk.content

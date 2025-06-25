@@ -197,3 +197,6 @@ cython_debug/
 RASA/.rasa/
 RASA/models/
 .rasa/cache/cache.db
+
+#knowledge
+/RAG/knowledge

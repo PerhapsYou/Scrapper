@@ -346,7 +346,7 @@ class SLUChatbot {
 
         try{
             console.log("Sending message to server:", message);
-            const serverResponse = await fetch('http://localhost:5005/webhooks/rest/webhook', {
+            const serverResponse = await fetch('http://10.135.139.135:5005/webhooks/rest/webhook', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
