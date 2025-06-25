@@ -11,6 +11,25 @@ intents:
   - nlu_fallback
   - first_day
   - out_of_scope
+  - learning_mode
+  - inc_nc
+  - failing_gened
+  - irreg_student_inquiry
+  - maximum_units_policy
+  - retention_policy
+  - advanced_subject_policy
+  - tuition_fee
+  - payment_time
+  - online_payment_option
+  - program_shifting_option
+  - web_portal_issue
+  - only_block_option
+  - change_block_schedule
+  - uncertain_block_swap
+  - petition_course
+  - readmission_process
+  - window_10_clearance
+  
   
 
 actions:

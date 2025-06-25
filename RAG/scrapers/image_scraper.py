@@ -21,12 +21,17 @@ def scan_images(folder="knowledge"):
 
             try:
                 img = Image.open(image_path)
-                text = pytesseract.image_to_string(img)
+                text = pytesseract.image_to_string(img).strip()
 
-                with open(txt_path, "w", encoding="utf-8") as f:
-                    f.write(text.strip())
+                if text:
+                    with open(txt_path, "w", encoding="utf-8") as f:
+                        f.write(text)
+                    print(f"[Success] Text from {filename} saved to {txt_filename}")
+                else:
+                    if os.path.exists(txt_path):
+                        os.remove(txt_path)
+                    print(f"[Info] No text found in {filename}. Skipping file creation.")
 
-                print(f"[Success] Text from {filename} saved to {txt_filename}")
             except Exception as e:
                 print(f"[Error] Failed to process {filename}: {e}")
 

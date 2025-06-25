@@ -9,9 +9,15 @@ from fastapi.responses import StreamingResponse
 from rag_pipeline import RAGPipeline  
 from build_vector_index import BuildVectorIndex
 
+from threading import Lock
+
+#signal when to stop RAG response
+stop_signal = {"stop": False}
+stop_lock = Lock()
+
 # Build Knowledge. Can comment out this section if knowledge already built
-#build_vector_index = BuildVectorIndex()
-#build_vector_index.run()
+build_vector_index = BuildVectorIndex()
+build_vector_index.run()
 
 
 # Initialize FastAPI app
@@ -41,13 +47,20 @@ async def stream_response(request: Request):
             content={"responses": [{"query": "No query found in message."}], "events": []}
         )
         
+     # Reset stop flag before each new generation
+    with stop_lock:
+        stop_signal["stop"] = False
+        
+    # Token generator will not work when user asks the bot to stop RAG response
     async def token_generator():
         for token in rag_pipeline.get_ollama_stream(query):
+            with stop_lock:
+                if stop_signal["stop"]:
+                    break
             yield f"data: {token}\n\n"
 
     return StreamingResponse(token_generator(), media_type="text/event-stream")
 
-# Endpoint
 @app.post("/query")
 async def query(request: Request):
     body = await request.json()
@@ -72,3 +85,10 @@ async def query(request: Request):
     print(response)
 
     return response
+
+#when user clicks on stop button, stop RAG respose
+@app.post("/stop")
+async def stop_generation():
+    with stop_lock:
+        stop_signal["stop"] = True
+    return {"status": "stop requested"}
