@@ -9,9 +9,9 @@ from contextlib import asynccontextmanager
 from rag_pipeline import RAGPipeline  
 from build_vector_index import BuildVectorIndex
 
-# Build Knowledge. Can comment out this section if knowledge already built
-build_vector_index = BuildVectorIndex()
-build_vector_index.run()
+# # Build Knowledge. Can comment out this section if knowledge already built
+# build_vector_index = BuildVectorIndex()
+# build_vector_index.run()
  
 # Globals for FAISS and pipeline readiness
 rag_pipeline = None

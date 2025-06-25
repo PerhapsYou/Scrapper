@@ -33,18 +33,18 @@ class BuildVectorIndex:
     def run(self):
         # # 1. Ask for web scraping
         # if ask_user("Web Scraping Confirmation", "Do you want to run web scraping before scanning PDFs and images?"):
-        run_scraper(urls_path="urls.txt", output_dir=DIR, depth=2)
+        # run_scraper(urls_path="urls.txt", output_dir=DIR, depth=2)
         # else:
         #     print("[Skip] Web scraping skipped.")
 
         # # 2. Ask for PDF scanning
         # if ask_user("PDF Scanning Confirmation", "Do you want to scan PDFs in the knowledge folder?"):
-        scan_all_pdfs()
+        # scan_all_pdfs()
         # else:
         #     print("[Skip] PDF scanning skipped.")
 
         # 3. Always run image scanning
-        scan_images(folder=DIR)
+        # scan_images(folder=DIR)
 
         # 4. Load all .txt files and build vector index
         loader = DirectoryLoader(

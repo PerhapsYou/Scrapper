@@ -18,7 +18,7 @@ services:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 10
 
   rasa_server:
     build:
@@ -45,11 +45,11 @@ services:
     build: 
       context: ./client
       dockerfile: Dockerfile.client
+    ports:
+      - "8080:80"
     depends_on:
       rag_server:
         condition: service_healthy
-    ports:
-      - "8080:80"
 
   
   ollama:
