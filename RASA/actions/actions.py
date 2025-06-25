@@ -48,3 +48,9 @@ class ActionRAGFallback(Action):
 
         return []
     
+    def send_stop_signal():
+        try:
+            requests.post("http://rag_server:8000/stop")
+        except Exception as e:
+            print("Failed to send stop signal:", str(e))
+    

@@ -1,8 +1,16 @@
 class SLUChatbot {
     constructor() {
+        //uginx proxy
+        this.defaultBackendPort = 8000;
+        this.protocol = window.location.protocol;
+        this.hostname = window.location.hostname;
+        this.ragServer = `${this.protocol}//${this.hostname}:${this.defaultBackendPort}`;
+
+
         this.chatMessages = document.getElementById('chatMessages');
         this.chatInput = document.getElementById('chatInput');
         this.sendBtn = document.getElementById('sendBtn');
+        this.stopBtn = document.getElementById('stopBtn');
         this.typingIndicator = document.getElementById('typingIndicator');
         this.menuOptions = document.getElementById('menuOptions');
         
@@ -243,8 +251,10 @@ class SLUChatbot {
     }
     
     initializeEventListeners() {
-        // Send button click
+        // Send button click/ stop button click
         this.sendBtn.addEventListener('click', () => this.handleSend());
+        this.stopBtn.addEventListener('click', () => this.handleStop());
+
         
         // Enter key press
         this.chatInput.addEventListener('keypress', (e) => {
@@ -273,6 +283,28 @@ class SLUChatbot {
             this.chatInput.style.height = Math.min(this.chatInput.scrollHeight, 100) + 'px';
         });
     }
+
+    handleStop() {
+        fetch(`${this.ragServer}/stop`, {
+            method: "POST"
+        })
+        .then(res => res.json())
+        .then(data => {
+            console.log("Stop requested:", data);
+            this.hideTypingIndicator();
+            this.toggleButtons(false);
+        })
+        .catch(err => {
+            console.error("Stop request failed:", err);
+        });
+    }
+
+    toggleButtons(isBotGenerating) {
+        this.sendBtn.style.display = isBotGenerating ? "none" : "inline-block";
+        this.stopBtn.style.display = isBotGenerating ? "inline-block" : "none";
+    }
+
+
     
     displayCurrentTime() {
         const now = new Date();
@@ -291,6 +323,8 @@ class SLUChatbot {
         this.addUserMessage(message);
         this.chatInput.value = '';
         this.chatInput.style.height = 'auto';
+        this.toggleButtons(true); // Show stop button
+
         
         await this.processMessage(message);
     }
@@ -346,7 +380,7 @@ class SLUChatbot {
 
         try{
             console.log("Sending message to server:", message);
-            const serverResponse = await fetch('http://10.135.139.135:5005/webhooks/rest/webhook', {
+            const serverResponse = await fetch('http://localhost:5005/webhooks/rest/webhook', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -360,7 +394,11 @@ class SLUChatbot {
                     await this.addBotMessage(message.text);
                 }
             }
+            //switch send button to stop button
+            this.toggleButtons(false);
         } catch (error) {
+            //switch send button to stop button
+            this.toggleButtons(false);
             // Fallback response
             console.log(error)
             await this.addBotMessage(
@@ -519,20 +557,3 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-//stop button
-document.addEventListener("DOMContentLoaded", () => {
-    const stopBtn = document.getElementById("stopBtn");
-    stopBtn.addEventListener("click", () => {
-        fetch("/stop", {
-            method: "POST"
-        })
-        .then(res => res.json())
-        .then(data => {
-            console.log("Stop requested:", data);
-            document.getElementById("typingIndicator").style.display = "none"; // hide typing
-        })
-        .catch(err => {
-            console.error("Stop request failed:", err);
-        });
-    });
-});

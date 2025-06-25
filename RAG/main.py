@@ -28,6 +28,9 @@ llm_backend = os.getenv("LLM_BACKEND", "ollama")
 # Initialize RAG pipeline: now RAGPipelines has one argument llm_backend
 rag_pipeline = RAGPipeline(llm_backend="ollama")
 
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
 
 @app.get('/')
 def read_root():
