@@ -127,8 +127,6 @@ nlu:
     - can you beatbox?
     - how do you fix a flat tire?
 
-# Christian 19 JUN =======
-# added nlu intents
 - intent: learning_mode
   examples: | 
     - how is the class conducted?
@@ -265,6 +263,5 @@ nlu:
     - I am a regular student and I cannot enroll online. A message says I need to report to Window 10. What does this mean?
     - What does it mean to report to Window 10?
     - I received a message about Window 10 clearance.
-#===================
 
 - intent: nlu_fallback

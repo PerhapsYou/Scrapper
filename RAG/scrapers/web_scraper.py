@@ -98,7 +98,6 @@ def crawl(url, depth=2):
 
     return [page_data] + sub_pages
 
-# Christian-JUN20===============
 #download any seen pdfs and images
 def download_assets(html, base_url, output_folder="knowledge"):
     os.makedirs(output_folder, exist_ok=True)
@@ -117,7 +116,6 @@ def download_assets(html, base_url, output_folder="knowledge"):
                 logging.info(f"Downloaded: {filename}")
             except Exception as e:
                 logging.warning(f"Failed to download {file_url}: {e}")
-# ==========================
 
 # Save parsed data to txt
 def save_to_txt(parsed_data_list, domain_name, output_dir="knowledge"):

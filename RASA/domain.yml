@@ -58,7 +58,6 @@ responses:
   utter_first_day:
   - text: "The first day of the semester is August 12, 2025."
 
-# Christian 19 JUN =======
   utter_learning_mode:
   - text: "For undergraduate programs, classes are conducted purely onsite. For graduate studies, we follow a hyflex learning model."
 
@@ -112,8 +111,6 @@ responses:
 
   utter_window_10_clearance:
   - text: "This means there is a restriction on your enrollment that needs to be cleared. Please visit the University Registrar’s Window 10 at the Diego Silang Main Campus. Once you’ve been cleared at their office, the restriction will be lifted, allowing you to complete your enrollment."
-
-# ========================
 
 session_config:
   session_expiration_time: 60
