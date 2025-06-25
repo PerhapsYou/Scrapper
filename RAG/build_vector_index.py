@@ -11,8 +11,8 @@ import numpy as np
 import os
 
 # #message box asking whether or not user wants to scrape the web, pdfs, and images
-# import tkinter as tk
-# from tkinter import messagebox
+import tkinter as tk
+from tkinter import messagebox
 
 #calling scrapers into this pipeline
 from scrapers.web_scraper import run_scraper 
@@ -22,29 +22,30 @@ from scrapers.pdf_scraper import PDFScraper
 
 DIR = "knowledge"  # Directory where text files are stored
 
-# def ask_user(title, question):
-#     root = tk.Tk()
-#     root.withdraw()
-#     answer = messagebox.askyesno(title, question)
-#     root.destroy()
-#     return answer
+def ask_user(title, question):
+    root = tk.Tk()
+    root.withdraw()
+    answer = messagebox.askyesno(title, question)
+    root.destroy()
+    return answer
 
 class BuildVectorIndex:
     def run(self):
-        # # 1. Ask for web scraping
-        # if ask_user("Web Scraping Confirmation", "Do you want to run web scraping before scanning PDFs and images?"):
-        # run_scraper(urls_path="urls.txt", output_dir=DIR, depth=2)
-        # else:
-        #     print("[Skip] Web scraping skipped.")
+        # 1. Ask for web scraping
+        if ask_user("Web Scraping Confirmation", "Do you want to run web scraping before scanning PDFs and images?"):
+            #run_scraper(urls_path="urls.txt", output_dir=DIR, depth=2)
+            print("not today.")
+        else:
+            print("[Skip] Web scraping skipped.")
 
-        # # 2. Ask for PDF scanning
-        # if ask_user("PDF Scanning Confirmation", "Do you want to scan PDFs in the knowledge folder?"):
-        # scan_all_pdfs()
-        # else:
-        #     print("[Skip] PDF scanning skipped.")
+        # 2. Ask for PDF scanning
+        if ask_user("PDF Scanning Confirmation", "Do you want to scan PDFs in the knowledge folder?"):
+            scan_all_pdfs()
+        else:
+            print("[Skip] PDF scanning skipped.")
 
         # 3. Always run image scanning
-        # scan_images(folder=DIR)
+        scan_images(folder=DIR)
 
         # 4. Load all .txt files and build vector index
         loader = DirectoryLoader(

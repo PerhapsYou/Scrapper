@@ -1,8 +1,11 @@
 FROM python:3.10-slim
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential curl && \
+# Install system dependencies include tkinter
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    python3-tk \
+    build-essential \
+    curl && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

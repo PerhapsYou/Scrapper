@@ -14,11 +14,6 @@ services:
       - ollama
     volumes:
       - ./RAG:/app
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
 
   rasa_server:
     build:
@@ -47,9 +42,6 @@ services:
       dockerfile: Dockerfile.client
     ports:
       - "8080:80"
-    depends_on:
-      rag_server:
-        condition: service_healthy
 
   
   ollama:

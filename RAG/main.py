@@ -45,12 +45,6 @@ async def lifespan(app: FastAPI):
 # Initialize FastAPI with lifespan handler
 app = FastAPI(lifespan=lifespan)
 
-@app.get("/health")
-def health():
-    if faiss_ready:
-        return {"status": "ok"}
-    return JSONResponse(status_code=503, content={"status": "loading"})
-
 
 @app.post("/chat/stream")
 async def stream_response(request: Request):
