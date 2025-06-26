@@ -4,65 +4,76 @@
 # See this guide on how to implement these action:
 # https://rasa.com/docs/rasa/custom-actions
 
-
-# This is a simple example for a custom action which utters "Hello World!"
-
 from typing import Any, Text, Dict, List
 from rasa_sdk import Action, Tracker
-import requests,sseclient
-import pymysql
 from rasa_sdk.executor import CollectingDispatcher
-from typing import Any,Dict,List
 
-DB_CONFIG = {
-    "host": "localhost",
-    "user": "root",
-    "password": "",
-    "database": "navi-bot"
-}
-class ActionShowMenu(Action):
-    def name(self) -> str:
-        return "action_show_menu"
+import requests
+import sseclient
+import pymysql
 
-    def run(self, dispatcher: CollectingDispatcher,
-            tracker: Tracker,
-            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
-        connection = pymysql.connect(**DB_CONFIG)
-        cursor = connection.cursor()
-        cursor.execute("SELECT title, emoji FROM menu_item")
-        results = cursor.fetchall()
-        connection.close()
+# --- FastAPI setup ---
+app = FastAPI()
 
-        if not results:
-            dispatcher.utter_message("Sorry, the menu is currently unavailable.")
-            return []
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all for dev; restrict in prod
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-        menu_text = "\n".join(f"{emoji} {title}" for title, emoji in results)
-        print("[debug menu items]", menu_text)
-        dispatcher.utter_message(text=f"Here are the available options:\n{menu_text}")
-        return []
+# --- DB connection ---
+def get_db_connection():
+    return pymysql.connect(
+        host='localhost',
+        user='root',
+        password='',
+        database='navi-bot',
+        cursorclass=pymysql.cursors.DictCursor
+    )
 
+# --- FastAPI endpoint for menu ---
+@app.get("/menu")
+async def get_menu():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, title, emoji, content FROM menu_item")
+    rows = cursor.fetchall()
+    cursor.close()
+    conn.close()
+
+    return {"menu": rows}
+
+
+# --- Custom RAG Fallback Action ---
 class ActionRAGFallback(Action):
     def name(self) -> str:
         return "action_rag_fallback"
-    
-    async def run(self, dispatcher: "CollectingDispatcher", 
-            tracker: Tracker, 
-             domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
-        
-        user_message = tracker.latest_message.get("text")
 
-        # Call the RAG service
-        #rag_response 
-        rag_url = "http://rag_server:8000/chat/stream"
+    async def run(self,
+                  dispatcher: CollectingDispatcher,
+                  tracker: Tracker,
+                  domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+
+        user_message = tracker.latest_message.get("text", "").strip().lower()
+
+        # Avoid sending common menu/help keywords to RAG
+        if user_message in ["menu", "show menu", "help", "options"]:
+            dispatcher.utter_message(text="You can click the menu icon or type a question.")
+            return []
+
         try:
+            rag_url = "http://rag_server:8000/chat/stream"
             response = requests.post(
-                rag_url, 
+                rag_url,
                 json={"query": user_message},
-                stream=True)
-            
-            
+                stream=True
+            )
+
             sse_client = sseclient.SSEClient(response)
             full_answer = ""
             for event in sse_client.events():
@@ -71,18 +82,7 @@ class ActionRAGFallback(Action):
                 full_answer += event.data
 
             dispatcher.utter_message(text=full_answer)
-            return []
         except requests.exceptions.RequestException as e:
-            rag_response = f"Error connecting to RAG service: {str(e)}"
-
-        # Send the response back to the user
-        dispatcher.utter_message(text=rag_response)
+            dispatcher.utter_message(text=f"Error connecting to RAG service: {str(e)}")
 
         return []
-    
-    def send_stop_signal():
-        try:
-            requests.post("http://rag_server:8000/stop")
-        except Exception as e:
-            print("Failed to send stop signal:", str(e))
-    
