@@ -15,10 +15,7 @@ class SLUChatbot {
         this.menuOptions = document.getElementById('menuOptions');
         
         this.isTyping = false;
-        
-        this.initializeEventListeners();
-        this.displayCurrentTime();
-        this.initializeWelcomeMessage();
+    
 
         this.abortController = null;
     }

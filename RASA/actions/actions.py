@@ -39,6 +39,7 @@ class ActionShowMenu(Action):
             return []
 
         menu_text = "\n".join(f"{emoji} {title}" for title, emoji in results)
+        print("[debug menu items]", menu_text)
         dispatcher.utter_message(text=f"Here are the available options:\n{menu_text}")
         return []
 
