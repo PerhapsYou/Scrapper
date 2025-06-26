@@ -90,6 +90,7 @@ pydot==1.4.2
 PyJWT==2.10.1
 pykwalify==1.8.0
 pymongo==4.3.3
+pymysql==1.0.2
 pyparsing==3.2.3
 pyrsistent==0.20.0
 python-crfsuite==0.9.11

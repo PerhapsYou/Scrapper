@@ -331,12 +331,26 @@ class SLUChatbot {
     async handleQuickAction(action) {
         switch (action) {
             case 'menu':
-                this.addUserMessage("Show Menu");
-                await this.addBotMessage(
-                    "Here are the available options. Please select one:",
-                    true
-                );
-                break;
+            this.addUserMessage("Show Menu");
+            try {
+                const response = await fetch("http://localhost:5005/webhooks/rest/webhook", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ message: "menu" })  // triggers intent: show_menu
+                });
+                const data = await response.json();
+                for (const message of data) {
+                    if (message.text) {
+                        await this.addBotMessage(message.text);
+                    }
+                }
+            } catch (err) {
+                console.error("Error fetching dynamic menu:", err);
+                await this.addBotMessage("Sorry, I couldn’t load the menu.");
+            }
+            break;
             case 'help':
                 this.addUserMessage("Help");
                 await this.addBotMessage(
