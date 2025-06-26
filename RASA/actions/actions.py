@@ -10,6 +10,38 @@
 from typing import Any, Text, Dict, List
 from rasa_sdk import Action, Tracker
 import requests,sseclient
+import pymysql
+from rasa_sdk.executor import CollectingDispatcher
+from typing import Any,Dict,List
+
+DB_CONFIG = {
+    "host": "localhost",
+    "user": "root",
+    "password": "",
+    "database": "navi-bot"
+}
+class ActionShowMenu(Action):
+    def name(self) -> str:
+        return "action_show_menu"
+
+    def run(self, dispatcher: CollectingDispatcher,
+            tracker: Tracker,
+            domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+
+        connection = pymysql.connect(**DB_CONFIG)
+        cursor = connection.cursor()
+        cursor.execute("SELECT title, emoji FROM menu_item")
+        results = cursor.fetchall()
+        connection.close()
+
+        if not results:
+            dispatcher.utter_message("Sorry, the menu is currently unavailable.")
+            return []
+
+        menu_text = "\n".join(f"{emoji} {title}" for title, emoji in results)
+        print("[debug menu items]", menu_text)
+        dispatcher.utter_message(text=f"Here are the available options:\n{menu_text}")
+        return []
 
 class ActionRAGFallback(Action):
     def name(self) -> str:
