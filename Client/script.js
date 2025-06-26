@@ -369,55 +369,91 @@ class SLUChatbot {
     
     async processMessage(message) {
         const lowerMessage = message.toLowerCase();
-        
+
+        // Keyword or Menu matching
         if (this.isMenuRequest(lowerMessage)) {
-            await this.addBotMessage(
-                "Here are the available options. Please select one:",
-                true
-            );
+            await this.addBotMessage("Here are the available options. Please select one:", true);
             return;
         }
-        
+
         const response = this.getKeywordResponse(lowerMessage);
         if (response) {
             await this.addBotMessage(response);
             return;
         }
 
-        try{
+        try {
+            console.log("Sending message to RAG server:", message);
+
+            // Setup AbortController for cancel support
             this.abortController = new AbortController();
             const signal = this.abortController.signal;
 
-            console.log("Sending message to server:", message);
-            const serverResponse = await fetch('http://localhost:5005/webhooks/rest/webhook', {
-            method: 'POST',
+            // Fetch streaming response from FastAPI
+            const response = await fetch(`${this.ragServer}/chat/stream`, {
+            method: "POST",
             headers: {
-                'Content-Type': 'application/json'
+                "Content-Type": "application/json"
             },
-            body: JSON.stringify({ "message": message })
+            body: JSON.stringify({ query: message }),
+            signal: signal
             });
-            const data = await serverResponse.json();
-            console.log("Rasa response:", JSON.stringify(data, null, 2));
-            for (const message of data) {
-                if (message.text) {
-                    await this.addBotMessage(message.text);
-                }
-            }
-            //switch send button to stop button
-            this.toggleButtons(false);
-            } catch (error) {
-                //switch send button to stop button
-                this.toggleButtons(false);
-                // Fallback response
-                console.log(error)
-                await this.addBotMessage(
-                `Sorry, I didn't understand that. Can you try again? You can type "menu" to see available options or use the quick buttons below.`
-                );
+
+            if (!response.ok || !response.body) {
+            throw new Error("RAG stream failed.");
             }
 
-        this.abortController = null;
-        this.toggleButtons(false);
+            this.isTyping = true;
+            this.toggleButtons(true); // Show Stop button
+            this.typingIndicator.classList.add("active");
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder("utf-8");
+            let fullText = "";
+            let botMessageDiv = document.createElement('div');
+            botMessageDiv.className = 'message bot-message';
+            botMessageDiv.innerHTML = `
+            <div class="message-content" id="live-stream-content"></div>
+            <div class="message-time">${this.getCurrentTime()}</div>
+            `;
+            this.chatMessages.appendChild(botMessageDiv);
+            const contentDiv = document.getElementById("live-stream-content");
+
+            while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const clean = chunk.replace(/^data:\s*/gm, '').trim();
+
+            if (clean && clean !== "[DONE]") {
+                fullText += clean;
+                contentDiv.innerHTML = `<span class="blink-cursor">${this.escapeHtml(fullText)}</span>`;
+                this.scrollToBottom();
+            }
+            }
+
+            //post-stream
+            this.typingIndicator.classList.remove("active");
+            this.toggleButtons(false); // Restore Send button
+            this.abortController = null;
+            this.isTyping = false;
+
+            // Remove blink-cursor so message stays static
+            if (contentDiv) {
+            contentDiv.innerHTML = this.escapeHtml(fullText);  // rewrite without blinking span
+            }
+
+        } catch (error) {
+            console.error("Error while processing:", error);
+            this.typingIndicator.classList.remove("active");
+            this.toggleButtons(false);
+            this.abortController = null;
+            this.isTyping = false;
+            await this.addBotMessage(`Sorry, something went wrong. Please try again.`);
+        }
     }
+
     
     // Menu keywords
     isMenuRequest(message) {

@@ -389,3 +389,18 @@ body {
 .bot-message .message-content strong {
     color: var(--dark-blue);
 }
+
+.blink-cursor::after {
+  content: "▌";
+  animation: blink 1s steps(2, start) infinite;
+}
+
+@keyframes blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+.message-content {
+  transition: opacity 0.3s ease;
+}
