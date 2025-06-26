@@ -20,6 +20,8 @@ class SLUChatbot {
         this.initializeEventListeners();
         this.displayCurrentTime();
         this.initializeWelcomeMessage();
+
+        this.abortController = null;
     }
     
     loadMenuData() {
@@ -285,6 +287,10 @@ class SLUChatbot {
     }
 
     handleStop() {
+        if (this.abortController) {
+            this.abortController.abort();  // Immediately cancel any ongoing fetch
+            this.abortController = null;   // Reset
+        }
         fetch(`${this.ragServer}/stop`, {
             method: "POST"
         })
@@ -379,6 +385,9 @@ class SLUChatbot {
         }
 
         try{
+            this.abortController = new AbortController();
+            const signal = this.abortController.signal;
+
             console.log("Sending message to server:", message);
             const serverResponse = await fetch('http://localhost:5005/webhooks/rest/webhook', {
             method: 'POST',
@@ -396,15 +405,18 @@ class SLUChatbot {
             }
             //switch send button to stop button
             this.toggleButtons(false);
-        } catch (error) {
-            //switch send button to stop button
-            this.toggleButtons(false);
-            // Fallback response
-            console.log(error)
-            await this.addBotMessage(
+            } catch (error) {
+                //switch send button to stop button
+                this.toggleButtons(false);
+                // Fallback response
+                console.log(error)
+                await this.addBotMessage(
                 `Sorry, I didn't understand that. Can you try again? You can type "menu" to see available options or use the quick buttons below.`
-            );
-        }
+                );
+            }
+
+        this.abortController = null;
+        this.toggleButtons(false);
     }
     
     // Menu keywords

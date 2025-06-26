@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from langchain_community.embeddings import HuggingFaceEmbeddings
 import os # used to get user choice of LLM saved in device environment variable
 from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware # middleware, allowing connection between client and server
 
 # local Imports
 from rag_pipeline import RAGPipeline  
@@ -22,6 +23,15 @@ build_vector_index.run()
 
 # Initialize FastAPI app
 app = FastAPI()
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:8080"],  # You can use ["*"] for dev
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # now user can choose between LLMs
 llm_backend = os.getenv("LLM_BACKEND", "ollama") 
