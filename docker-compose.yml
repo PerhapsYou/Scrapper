@@ -58,6 +58,19 @@ services:
     command: serve
     networks:
       - chatbot_network
+
+  db:
+    image: mysql:5.7
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: navi-bot
+    volumes:
+      - ./DB/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "3306:3306"
+    networks:
+      - chatbot_network
   
 volumes:
   ollama_data:

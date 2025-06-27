@@ -29,9 +29,9 @@ app.add_middleware(
 # --- DB connection ---
 def get_db_connection():
     return pymysql.connect(
-        host='localhost',
+        host='db',
         user='root',
-        password='',
+        password='root',
         database='navi-bot',
         cursorclass=pymysql.cursors.DictCursor
     )

@@ -37,9 +37,9 @@ app.add_middleware(
 # Utility: database connection
 def get_db_connection():
     return pymysql.connect(
-        host="host.docker.internal", 
+        host="db", 
         user="root",
-        password="",
+        password="root",
         database="navi-bot",
         cursorclass=pymysql.cursors.DictCursor
     )
