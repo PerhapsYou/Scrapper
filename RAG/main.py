@@ -1,5 +1,5 @@
     #RAG SERVER
-from fastapi import FastAPI, Request, APIRouter #for db access
+from fastapi import FastAPI, Request, Query #for db access
 from fastapi.responses import JSONResponse
 from langchain_community.embeddings import HuggingFaceEmbeddings
 import os # used to get user choice of LLM saved in device environment variable
@@ -7,7 +7,8 @@ from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware # middleware, allowing connection between client and server
 import pymysql # for db access
 # local Imports
-from rag_pipeline import RAGPipeline  
+from rag_pipeline import RAGPipeline
+# Importing the BuildVectorIndex class to build the vector index  
 from build_vector_index import BuildVectorIndex
 
 from threading import Lock
@@ -19,7 +20,6 @@ stop_lock = Lock()
 # Build Knowledge. Can comment out this section if knowledge already built
 build_vector_index = BuildVectorIndex()
 build_vector_index.run()
-
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -70,33 +70,26 @@ def read_root():
 
 
 
-@app.post("/chat/stream")
-async def stream_response(request: Request):
-    body = await request.json()
-    print("Received body:", body)  
 
-    # Extract query from tracker
-    query = body.get("query", "")
+@app.get("/chat/stream")
+async def stream_response(query: str = Query(...)):
+    print("Received query:", query)
 
-    if not query:
-        return JSONResponse(
-            status_code=200,
-            content={"responses": [{"query": "No query found in message."}], "events": []}
-        )
-        
-     # Reset stop flag before each new generation
+    # Reset stop flag
     with stop_lock:
         stop_signal["stop"] = False
-        
-    # Token generator will not work when user asks the bot to stop RAG response
+
     async def token_generator():
-        for token in rag_pipeline.get_ollama_stream(query):
+        async for token in rag_pipeline.get_ollama_stream(query):
             with stop_lock:
                 if stop_signal["stop"]:
+                    print("🛑 Stop signal received. Interrupting stream.")
                     break
             yield f"data: {token}\n\n"
 
+
     return StreamingResponse(token_generator(), media_type="text/event-stream")
+
 
 @app.post("/query")
 async def query(request: Request):

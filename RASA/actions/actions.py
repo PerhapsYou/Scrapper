@@ -54,35 +54,21 @@ class ActionRAGFallback(Action):
     def name(self) -> str:
         return "action_rag_fallback"
 
-    async def run(self,
-                  dispatcher: CollectingDispatcher,
-                  tracker: Tracker,
-                  domain: Dict[Text, Any]) -> List[Dict[Text, Any]]:
+    async def run(
+        self,
+        dispatcher: CollectingDispatcher,
+        tracker: Tracker,
+        domain: Dict[Text, Any]
+    ) -> List[Dict[Text, Any]]:
 
         user_message = tracker.latest_message.get("text", "").strip().lower()
 
-        # Avoid sending common menu/help keywords to RAG
+        # Optional: skip RAG trigger for generic menu/help commands
         if user_message in ["menu", "show menu", "help", "options"]:
             dispatcher.utter_message(text="You can click the menu icon or type a question.")
             return []
 
-        try:
-            rag_url = "http://rag_server:8000/chat/stream"
-            response = requests.post(
-                rag_url,
-                json={"query": user_message},
-                stream=True
-            )
-
-            sse_client = sseclient.SSEClient(response)
-            full_answer = ""
-            for event in sse_client.events():
-                if event.data == "[DONE]":
-                    break
-                full_answer += event.data
-
-            dispatcher.utter_message(text=full_answer)
-        except requests.exceptions.RequestException as e:
-            dispatcher.utter_message(text=f"Error connecting to RAG service: {str(e)}")
+        # 🚨 Instead of contacting RAG directly, send a signal to frontend to handle it
+        dispatcher.utter_message(json_message={"stream_from_rag": True, "query": user_message})
 
         return []
