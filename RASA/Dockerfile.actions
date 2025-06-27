@@ -1,12 +1,15 @@
 FROM python:3.10-slim
 
 # Install basic system packages
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential curl && \
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    default-libmysqlclient-dev \
+    build-essential \
+    pkg-config && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
-WORKDIR /app
+WORKDIR /app    
 
 # Copy actions and requirements
 COPY ./actions /app/actions

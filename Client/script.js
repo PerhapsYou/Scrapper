@@ -4,7 +4,8 @@ class SLUChatbot {
         this.defaultBackendPort = 8000;
         this.protocol = window.location.protocol;
         this.hostname = window.location.hostname;
-        this.ragServer = `${this.protocol}//${this.hostname}:${this.defaultBackendPort}`;
+        this.actionsURL = `${this.protocol}//${this.hostname}:${this.defaultBackendPort}`;
+        //this.acionsURL = window.location.origin;
 
 
         this.chatMessages = document.getElementById('chatMessages');
@@ -22,30 +23,13 @@ class SLUChatbot {
 
     async init() {
         // Load menu data from server
-        this.menuData = await this.loadMenuData();
+        await this.loadMenuData(); //load menu on startup
+        this.menuOptions.style.display = 'none'; //hide menu options initially (just for debugging in console)
         this.initializeEventListeners();
         this.displayCurrentTime();
         this.initializeWelcomeMessage();
     }
     
-    async loadMenuData() {
-    try {
-        const res = await fetch(`${this.ragServer}/menu`);
-        const data = await res.json();
-        const menu = {};
-        data.menu.forEach((item, index) => {
-            menu[item.id] = {
-                title: item.title,
-                emoji: item.emoji,
-                content: item.content
-            };
-        });
-        return menu;
-    } catch (e) {
-        console.error("Failed to load menu data from server:", e);
-        return {};
-    }
-}
     
     async initializeWelcomeMessage() {
         const staticWelcome = document.querySelector('#chatMessages .message.bot-message');
@@ -188,91 +172,37 @@ class SLUChatbot {
     }
     
     async processMessage(message) {
-        const lowerMessage = message.toLowerCase();
+    try {
+        this.abortController = new AbortController();
+        const signal = this.abortController.signal;
 
-        // Keyword or Menu matching
-        if (this.isMenuRequest(lowerMessage)) {
-            await this.addBotMessage("Here are the available options. Please select one:", true);
-            return;
-        }
-
-        const response = this.getKeywordResponse(lowerMessage);
-        if (response) {
-            await this.addBotMessage(response);
-            return;
-        }
-
-        try {
-            console.log("Sending message to RAG server:", message);
-
-            // Setup AbortController for cancel support
-            this.abortController = new AbortController();
-            const signal = this.abortController.signal;
-
-            // Fetch streaming response from FastAPI
-            const response = await fetch(`${this.ragServer}/chat/stream`, {
+        const response = await fetch("http://localhost:5005/webhooks/rest/webhook", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ query: message }),
-            signal: signal
-            });
+            body: JSON.stringify({ sender: "user", message }),
+            signal
+        });
 
-            if (!response.ok || !response.body) {
-            throw new Error("RAG stream failed.");
+        const data = await response.json();
+
+        for (const item of data) {
+            if (item.text) {
+                await this.addBotMessage(item.text);
             }
-
-            this.isTyping = true;
-            this.toggleButtons(true); // Show Stop button
-            this.typingIndicator.classList.add("active");
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder("utf-8");
-            let fullText = "";
-            let botMessageDiv = document.createElement('div');
-            botMessageDiv.className = 'message bot-message';
-            botMessageDiv.innerHTML = `
-            <div class="message-content" id="live-stream-content"></div>
-            <div class="message-time">${this.getCurrentTime()}</div>
-            `;
-            this.chatMessages.appendChild(botMessageDiv);
-            const contentDiv = document.getElementById("live-stream-content");
-
-            while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            const chunk = decoder.decode(value);
-            const clean = chunk.replace(/^data:\s*/gm, '').trim();
-
-            if (clean && clean !== "[DONE]") {
-                fullText += clean;
-                contentDiv.innerHTML = `<span class="blink-cursor">${this.escapeHtml(fullText)}</span>`;
-                this.scrollToBottom();
-            }
-            }
-
-            //post-stream
-            this.typingIndicator.classList.remove("active");
-            this.toggleButtons(false); // Restore Send button
-            this.abortController = null;
-            this.isTyping = false;
-
-            // Remove blink-cursor so message stays static
-            if (contentDiv) {
-            contentDiv.innerHTML = this.escapeHtml(fullText);  // rewrite without blinking span
-            }
-
-        } catch (error) {
-            console.error("Error while processing:", error);
-            this.typingIndicator.classList.remove("active");
-            this.toggleButtons(false);
-            this.abortController = null;
-            this.isTyping = false;
-            await this.addBotMessage(`Sorry, something went wrong. Please try again.`);
         }
+
+        this.toggleButtons(false);
+        this.isTyping = false;
+    } catch (error) {
+        console.error("Error contacting Rasa:", error);
+        await this.addBotMessage("Sorry, something went wrong.");
+        this.toggleButtons(false);
+        this.isTyping = false;
     }
+}
+
 
     
     // Menu keywords
@@ -281,49 +211,15 @@ class SLUChatbot {
         return menuKeywords.some(keyword => message.includes(keyword));
     }
     
-    getKeywordResponse(message) {
-        // Admission keywords
-        if (message.includes('admission') || message.includes('requirement') || message.includes('apply') || message.includes('eligible')) {
-            return this.menuData["1"].content;
-        }
-        
-        // Program keywords
-        if (message.includes('program') || message.includes('course') || message.includes('degree') || message.includes('major')) {
-            return this.menuData["2"].content;
-        }
-        
-        // Fee keywords
-        if (message.includes('fee') || message.includes('cost') || message.includes('tuition') || message.includes('price')) {
-            return this.menuData["3"].content;
-        }
-        
-        // Scholarship keywords
-        if (message.includes('scholarship') || message.includes('financial aid') || message.includes('discount')) {
-            return this.menuData["4"].content;
-        }
-        
-        // Enrollment keywords
-        if (message.includes('enroll') || message.includes('registration') || message.includes('process')) {
-            return this.menuData["5"].content;
-        }
-        
-        // Contact keywords
-        if (message.includes('contact') || message.includes('mobile') || message.includes('phone') || message.includes('email') || message.includes('reach')) {
-            return this.menuData["6"].content;
-        }
-        
-        return null;
+    async handleMenuSelection(optionId) {
+    const selected = this.menuData.menu.find(item => item.id == optionId);
+    if (selected) {
+        this.addUserMessage(selected.title);
+        await this.addBotMessage(selected.content);
+        this.hideMenuOptions();
     }
-    
-    async handleMenuSelection(option) {
-        const menuItem = this.menuData[option];
-        if (menuItem) {
-            this.addUserMessage(menuItem.title);
-            await this.addBotMessage(menuItem.content);
-            
-            this.hideMenuOptions();
-        }
     }
+
     
     async handleQuickAction(action) {
         switch (action) {
@@ -343,6 +239,8 @@ class SLUChatbot {
                         await this.addBotMessage(message.text);
                     }
                 }
+                await this.showMenuOptions(); // menu is shown after bot message
+
             } catch (err) {
                 console.error("Error fetching dynamic menu:", err);
                 await this.addBotMessage("Sorry, I couldn’t load the menu.");
@@ -367,26 +265,28 @@ class SLUChatbot {
     showMenuOptions() {
         const menuGrid = this.menuOptions.querySelector('.menu-grid');
         menuGrid.innerHTML = '';
-        
-        Object.entries(this.menuData).forEach(([key, item]) => {
+
+        this.menuData.menu.forEach(item => {
             const button = document.createElement('button');
             button.className = 'menu-btn';
-            button.dataset.option = key;
+            button.dataset.optionId = item.id;
+            button.dataset.content = item.content;
             button.innerHTML = `
                 <span class="menu-emoji">${item.emoji}</span>
                 <span class="menu-text">${item.title}</span>
             `;
             menuGrid.appendChild(button);
         });
-        
+
         const lastBotMessage = [...this.chatMessages.querySelectorAll('.bot-message')].pop();
         if (lastBotMessage) {
             lastBotMessage.appendChild(this.menuOptions);
         }
-        
+
         this.menuOptions.style.display = 'block';
         this.scrollToBottom();
     }
+
     
     hideMenuOptions() {
         this.menuOptions.style.display = 'none';
@@ -399,6 +299,25 @@ class SLUChatbot {
         
         await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
     }
+
+    async loadMenuData() {
+        try {
+            const res = await fetch(`${this.actionsURL}/menu`);
+            const data = await res.json();
+
+            this.menuData = data;
+
+            console.log("Menu data loaded:", this.menuData);
+
+            if (this.menuOptions.style.display !== 'none') {
+                this.showMenuOptions();
+            }
+        } catch (error) {
+            console.error(">< Failed to load menu data from server:", error);
+            this.menuData = { menu: [] }; // fallback to empty to avoid crashes
+        }
+    }
+
     
     hideTypingIndicator() {
         this.isTyping = false;
@@ -421,22 +340,24 @@ class SLUChatbot {
         return div.innerHTML;
     }
     
-    refreshMenuData() {
-        this.menuData = this.loadMenuData();
+    async refreshMenuData() {
+        await this.loadMenuData();
         if (this.menuOptions.style.display !== 'none') {
             this.showMenuOptions();
         }
     }
+
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
     window.sluChatbot = new SLUChatbot();
     await window.sluChatbot.init();
     
-    window.addEventListener('storage', (e) => {
+    window.addEventListener('storage', async (e) => {
         if (e.key === 'slu_chatbot_menu') {
-            window.sluChatbot.refreshMenuData();
+            await window.sluChatbot.refreshMenuData();
         }
     });
+
 });
 

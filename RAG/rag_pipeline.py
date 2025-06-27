@@ -25,14 +25,16 @@ class RAGPipeline:
                 base_url="http://ollama:11434",
                 streaming=True  # Enable streaming
                 )
+            print("Connecting to Ollama at:", self.llmModel.base_url)
         except Exception as e:
                 raise RuntimeError("Ollama is not running. Please start it with `ollama run llama3`") from e
+    
 
     # this method will stream the answer to the question
     def get_ollama_stream(self, question: str):
         start = time.time()
 
-        docs = self.retriever.get_relevant_documents(question)
+        docs = self.retriever.invoke(question)
 
         print(f"FAISS retrieval took: {round(time.time() - start, 2)}s")
 
