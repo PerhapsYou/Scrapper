@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
 from concurrent.futures import ThreadPoolExecutor
 import logging
+from scrapers.cleaner import Cleaner
 
 
 # Setup logging
@@ -72,7 +73,7 @@ def get_internal_links(html, base_url):
 
     return links
 
-def crawl(url, depth=2):
+def crawl(url, depth=3):
     with visited_lock:
         if url in visited_urls or depth == 0:
             return []
@@ -147,7 +148,7 @@ def save_to_txt(parsed_data_list, domain_name, output_dir="knowledge"):
                 answer = faq["answer"].strip()
                 f.write(f"{question}\n{answer}\n\n")
 
-def run_scraper(urls_path="urls.txt", output_dir="knowledge", depth=2):
+def run_scraper(urls_path="urls.txt", output_dir="knowledge", depth=3):
     from urllib.parse import urlparse
 
     with open(urls_path, "r", encoding="utf-8") as f:
@@ -167,7 +168,7 @@ def main():
 
     for url in urls:
         print(f"\n[Start] Scraping: {url}")
-        scraped_data = crawl(url, depth=2)  # Depth can be tuned
+        scraped_data = crawl(url, depth=3)  # Depth can be tuned
         # Replace prints like this:
         logging.info("Starting scraper")
         logging.debug("Fetched HTML from %s", url)

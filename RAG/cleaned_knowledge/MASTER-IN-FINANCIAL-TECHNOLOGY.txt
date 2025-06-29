@@ -1,0 +1,64 @@
+=== Section: Saint Louis University ===
+
+=== Section ===
+A. Bonifacio, Baguio City
+=== End ===
+
+=== Section: School Of Advanced Studies ===
+
+=== Section ===
+Curriculum Checklist
+=== End ===
+
+=== Section: Accountancy, Business And Management Programs ===
+
+=== Section ===
+Master in Financial Technology (MFinTech )
+Name: Student ID No.:
+Course No. Descriptive Title Semester/Ter
+m Grad
+e Units
+BASIC COURSES (9 units)
+=== End ===
+
+=== Section: Mft 101 ===
+
+=== Section ===
+Analytics and Programming in Finance 3
+MFT 102 Money, Banking and Financial Institutions 3
+MFT 103 Innovation, Intrapreneurship and Entrepreneurship in
+FinTech Context 3
+MAJOR COURSES (12 units)
+MFT 111 Ethics & Professional Standards in Finance 3
+MFT 112 Finance, Artificial Intelligence and Machine Learning) 3
+MFT 113 Monetary System and Digital Finance 3
+MFT 114 Data Mining 3
+MFT 115 Block Chain and Applications 3
+MFT 116 Risk Analysis and Quantitative Asset Allocation
+=== End ===
+
+=== Section ===
+MFT 117 Financial Entrepreneurship 3
+MFT 118 Business Analytics and Artificial Intelligence 3
+MFT 119 Advanced Corporate Finance 3
+MFT 120 Digital & Open Banking 3
+MFT 121 Any 3 units from the MBA, MSBA program 3
+ELECTIVE COURSES (3 units)
+MFT 131 Financial Econometrics in R/PYTHON
+MFT 132 Asset Pricing and Portfolio Management
+MFT 133 Business Valuation in FinTech context
+MFT 134 Seminars, Current Trends in Financial Technology
+=== End ===
+
+=== Section: Comprehensive Examination/Review Of Related Literature ===
+
+=== Section ===
+Prerequisite: during last term or after completion of academic courses
+CAPSTONE PROJECTS (6 units)
+MFT 211 Capstone Project 1 3
+MFT 212 Capstone Project 2 3
+=== End ===
+
+=== Section: Total Number Of Units Of The ===
+
+=== Section: Program 30 ===

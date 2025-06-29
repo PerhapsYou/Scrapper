@@ -2,6 +2,7 @@ import os
 from PIL import Image
 from pytesseract import pytesseract
 from pathlib import Path
+from scrapers.cleaner import Cleaner
 
 # Set paths
 path_to_tesseract = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
@@ -22,11 +23,14 @@ def scan_images(folder="knowledge"):
             try:
                 img = Image.open(image_path)
                 text = pytesseract.image_to_string(img).strip()
+                text = Cleaner.runOCRCleaner(text)
 
                 if text:
                     with open(txt_path, "w", encoding="utf-8") as f:
                         f.write(text)
                     print(f"[Success] Text from {filename} saved to {txt_filename}")
+                elif not text.strip():
+                    print(f"NO TEXT FOUND, skipping")
                 else:
                     if os.path.exists(txt_path):
                         os.remove(txt_path)

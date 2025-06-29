@@ -1,0 +1,56 @@
+=== Section ===
+BS Electronics Engineering Program
+Student Outcomes
+Upon graduation, the students should be able to:
+SOa: apply knowledge of mathematics, natural science, and engineering fundamentals to the
+solution of complex engineering problems ;
+SOb: conduct investigations of complex engineering problems using research -based
+knowledge and research methods including design of experiments, analysis and
+interpretation of data, and synthesis of information to provide valid conclusions ;
+=== End ===
+
+=== Section ===
+SOc: design solutions for complex engineering problems and design systems, components or
+processes that meet specified needs with appropriate consideration for public health
+and safety, cultural, societal, and environmental considerations ;
+SOd: function effectively as an individu al, and as a member or leader in diverse teams and in
+multi -disciplinary settings ;
+SOe: identify, formulate, research literature and analyze complex engineering problems
+=== End ===
+
+=== Section ===
+reaching substantiated conclusions using first principles of mathematics, natural
+sciences and engineering sciences ;
+SOf: apply ethical principles and commit to professional ethics, responsibilities and norms of
+engineering practice ;
+SOg: communicate effectively on complex engineering activities with the engineering
+community and with society at large, such as being able to comprehend and write
+effective reports and design documentation, make effective presentations, and give and
+=== End ===
+
+=== Section ===
+receive clear instructions ;
+SOh: understand and evaluate the sustainability and impact of professional engineering work
+in the solution of complex engineering problems in societal and environmental context ;
+SOi: recognize the need for, and have the preparation and ability to engage in independent
+and life -long learning in the broadest context of technolog ical change ;
+SOj: apply reasoning informed by contextual knowledge to assess societal, health, safety,
+=== End ===
+
+=== Section ===
+legal and cultural issues and the consequent responsibilities relevant to professional
+engineering practice and solutions to complex engineering proble ms;
+SOk: create, select and apply appropriate techniques, resources, and modern engineering
+and IT tools, including prediction and modelling, to complex engineering problems with
+an understanding of the limitations ;
+SOl: demonstrate knowledge and under standing of engineering management principles and
+=== End ===
+
+=== Section ===
+economic decision -making and apply these to one s own work, as a member and leader
+in a team, to manage projects and in multidisciplinary environments ;
+SOm: use concepts from an engineering specializatio n in solving complex Electronics
+Engineering problems ;
+SOn: Practice Christian values in their personal and professional endeavors as Louisians in the
+service of the CICM mission.
+=== End ===

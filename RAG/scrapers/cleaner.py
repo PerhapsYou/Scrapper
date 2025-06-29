@@ -2,6 +2,15 @@ import re
 import unicodedata
 class Cleaner:
     def runOCRCleaner(text: str) -> str:
+        # Remove excess whitespace and line breaks
+        text = re.sub(r'\s+', ' ', text)
+        # Normalize bullets, dashes
+        text = re.sub(r'•|\u2022', '-', text)
+
+        # Collapse multiple dashes/spaces
+        text = re.sub(r'[-–—]{2,}', '-', text)
+        text = re.sub(r'\s{2,}', ' ', text)
+        
         # Normalize Unicode (e.g., fancy quotes → straight quotes)
         text = unicodedata.normalize("NFKC", text)
 
