@@ -46,7 +46,6 @@ services:
     networks:
       - chatbot_network
 
-  
   ollama:
     image: ollama/ollama
     container_name: ollama
@@ -58,7 +57,28 @@ services:
     command: serve
     networks:
       - chatbot_network
-  
+
+  axolotl:
+    build:
+      context: ./axolotl
+      dockerfile: Dockerfile
+    image: axolotl-local:latest
+    container_name: axolotl-container
+    volumes:
+      - ./RAG/axolotl_configs:/app/configs
+      - ./axolotl:/app/axolotl
+    working_dir: /app/axolotl
+    command: >
+      bash -c "python -m axolotl.cli.train /app/configs/config/your_config.yml"
+    #deploy:
+     # resources:
+      #  reservations:
+       #   devices:
+        #    - capabilities: [gpu]
+    #runtime: nvidia # NOTE: Only works with nvidia-docker (Linux); ignored on Mac
+    networks:
+      - chatbot_network
+
 volumes:
   ollama_data:
 

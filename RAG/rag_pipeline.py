@@ -1,6 +1,7 @@
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.embeddings import HuggingFaceInstructEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_ollama import ChatOllama
+import torch
 
 import time
 
@@ -9,7 +10,11 @@ llmModel = None  # Initialize llmModel to be used later in the class
 class RAGPipeline:
     def __init__(self, llm_backend: str = "ollama"):
         # Load embeddings and vector store
-        self.embedding = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+        self.embedding = HuggingFaceInstructEmbeddings(
+             model_name="hkunlp/instructor-xl",
+            # If you have a GPU, set device to "cuda", otherwise use "cpu"
+             model_kwargs={"device": "cuda" if torch.cuda.is_available() else "cpu"} 
+             )
         self.vector_store = FAISS.load_local(
             "vector_index",
             self.embedding,
@@ -21,7 +26,7 @@ class RAGPipeline:
         print("✅ Using Ollama (llama3) as LLM")
         try:
             self.llmModel = ChatOllama(
-                model="llama3:8b", 
+                model="tuned-model", 
                 base_url="http://ollama:11434",
                 streaming=True  # Enable streaming
                 )

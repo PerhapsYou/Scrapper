@@ -198,5 +198,7 @@ RASA/.rasa/
 RASA/models/
 .rasa/cache/cache.db
 
-#knowledge
-/RAG/knowledge
+
+
+.DS_Store
+RAG/.DS_Store
