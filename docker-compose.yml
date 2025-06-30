@@ -59,23 +59,19 @@ services:
       - chatbot_network
 
   axolotl:
-    build:
-      context: ./axolotl
-      dockerfile: Dockerfile
-    image: axolotl-local:latest
+    image: winglian/axolotl:main-py3.10-cu118-2.0.1
     container_name: axolotl-container
     volumes:
       - ./RAG/axolotl_configs:/app/configs
-      - ./axolotl:/app/axolotl
-    working_dir: /app/axolotl
-    command: >
-      bash -c "python -m axolotl.cli.train /app/configs/config/your_config.yml"
-    #deploy:
-     # resources:
-      #  reservations:
-       #   devices:
-        #    - capabilities: [gpu]
-    #runtime: nvidia # NOTE: Only works with nvidia-docker (Linux); ignored on Mac
+    command: python -m axolotl.cli /app/configs/config/llama3_finetune.yml
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities: [gpu]
     networks:
       - chatbot_network
 

@@ -1,7 +1,6 @@
     #RAG SERVER
 from fastapi import FastAPI, Request, APIRouter #for db access
 from fastapi.responses import JSONResponse
-from langchain_community.embeddings import HuggingFaceEmbeddings
 import os # used to get user choice of LLM saved in device environment variable
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware # middleware, allowing connection between client and server
