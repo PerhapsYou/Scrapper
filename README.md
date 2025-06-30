@@ -1,4 +1,4 @@
-lear# NaviBot
+# NaviBot
 
 This project will hold the chatbot to be adopted by Saint Louis University
 
@@ -21,6 +21,29 @@ Question -> RASA -> Determine Intent -> If unable to meet threshold, fallback to
 1. Locally will need to download poppler and tesseract:
     - brew install poppler (or Windows equivlent)
     - brew install tesseract
+
+## Flow
+
+User Input
+   ↓
+[Frontend Static Menu]
+   └──→ Matched → Predefined Response 
+   ↓
+[Fallback to RASA]
+   └──→ Matched → Intent Template Response 
+   ↓
+[RAG Pipeline]
+   └─→ Embed (InstructorXL)
+        ↓
+     FAISS Search
+        ↓
+Recursive Chunk Retrieval (w/ Metadata)
+        ↓
+[Prompt to LLaMA 3 8B]
+   Input = [CONTEXT] + [USER QUESTION]
+        ↓
+LLM Response
+
 
 ## Authors
 

@@ -1,7 +1,7 @@
 from langchain_community.vectorstores import FAISS
 from langchain_community.document_loaders import TextLoader
 from langchain.text_splitter import CharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_huggingface import HuggingFaceInstructEmbeddings
 
 from langchain_community.document_loaders import DirectoryLoader
 from scrapers.pdf_scraper import PDFScraper
@@ -17,7 +17,7 @@ from scrapers.web_scraper import run_scraper
 from scrapers.pdf_scraper import scan_all_pdfs
 from scrapers.image_scraper import scan_images
 
-DIR = "knowledge"  # Directory where text files are stored
+DIR = "knowledge/txt"  # Directory where text files are stored
 
 def ask_user(title, question):
     root = tk.Tk()
@@ -54,7 +54,7 @@ class BuildVectorIndex:
         splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=100)
         chunks = splitter.split_documents(documents)
 
-        embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+        embedding_model = HuggingFaceInstructEmbeddings(model_name="hkunlp/instructor-xl")
         vector_store = FAISS.from_documents(chunks, embedding_model)
         vector_store.save_local("vector_index")
 

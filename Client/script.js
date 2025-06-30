@@ -197,7 +197,7 @@ class SLUChatbot {
         this.isTyping = false;
     } catch (error) {
         console.error("Error contacting Rasa:", error);
-        await this.addBotMessage("Sorry, something went wrong.");
+        //await this.addBotMessage("Sorry, something went wrong.");
         this.toggleButtons(false);
         this.isTyping = false;
     }
