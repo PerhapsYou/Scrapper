@@ -16,8 +16,8 @@ stop_signal = {"stop": False}
 stop_lock = Lock()
 
 # Build Knowledge. Can comment out this section if knowledge already built
-#build_vector_index = BuildVectorIndex()
-#build_vector_index.run()
+build_vector_index = BuildVectorIndex()
+build_vector_index.run()
 
 
 # Initialize FastAPI app
@@ -34,14 +34,14 @@ app.add_middleware(
 
 
 # Utility: database connection
-def get_db_connection():
-    return pymysql.connect(
-        host="host.docker.internal", 
-        user="root",
-        password="",
-        database="navi-bot",
-        cursorclass=pymysql.cursors.DictCursor
-    )
+# def get_db_connection():
+#     return pymysql.connect(
+#         host="host.docker.internal", 
+#         user="root",
+#         password="",
+#         database="navi-bot",
+#         cursorclass=pymysql.cursors.DictCursor
+#     )
 
 # now user can choose between LLMs
 llm_backend = os.getenv("LLM_BACKEND", "ollama") 
@@ -114,6 +114,10 @@ async def query(request: Request):
     # 👇 RAG PIPELINE IMPLE
     response = rag_pipeline.get_ollama_stream(query)
     print(response)
+
+    if ("I don't know" in response):
+        with open("knowledge/unknown.txt", "w") as file:
+            file.write(query)
     response = JSONResponse(
         status_code=200,
         content={"response" : response.get("result", "no answer found.")} 

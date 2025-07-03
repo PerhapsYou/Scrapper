@@ -187,9 +187,35 @@ class SLUChatbot {
 
         const data = await response.json();
 
+        // for (const item of data) {
+        //     if (item.text) {
+        //         const rawMarkdown = `
+        // ### Computer Science Subjects
+        // - CSE 10: Advanced Computer Architecture
+        // - CSE 11: Advanced Operating Systems
+        // - CSE 12: Advanced Information Management
+        //         `.trim();
+        
+        //         const parsed = marked.parse(rawMarkdown);
+        //         await this.addBotMessage(parsed);
+        //     }
+        // }
+        const fixList = (raw) => {
+            // Ensure each course starts on a new line with "- "
+            return raw
+                .split('-')
+                .map(line => line.trim())
+                .filter(line => line.length > 0)
+                .map(line => `- ${line}`)
+                .join('\n');
+        };
+
         for (const item of data) {
             if (item.text) {
-                await this.addBotMessage(item.text);
+                const rawMarkdown = item.text.includes("-") ?  fixList(item.text.trim()) : item.text.trim();
+               // await this.addBotMessage(item.text);
+               const parsed = marked.parse(rawMarkdown)
+               await this.addBotMessage(parsed);
             }
         }
 

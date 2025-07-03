@@ -13,7 +13,7 @@ COPY requirements.txt .
 # Install everything globally (NO venv)
 RUN pip install --upgrade pip && pip install --no-cache-dir rasa==3.6.21 -r requirements.txt
 
-RUN rasa train
+RUN rasa train || (echo "Model training failed" && exit 1)
 
 # Run Rasa shell
-CMD ["rasa", "run"]
+CMD ["rasa", "run", "--enable-api", "--debug", "--cors", "*"]

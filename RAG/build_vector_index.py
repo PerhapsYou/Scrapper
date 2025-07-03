@@ -1,6 +1,6 @@
 from langchain_community.vectorstores import FAISS
 from langchain_community.document_loaders import TextLoader
-from langchain.text_splitter import CharacterTextSplitter
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 
 from langchain_community.document_loaders import DirectoryLoader
@@ -51,10 +51,10 @@ class BuildVectorIndex:
         if not documents:
             raise ValueError("No documents found. Please check the directory and file format.")
 
-        splitter = CharacterTextSplitter(chunk_size=500, chunk_overlap=100)
+        splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
         chunks = splitter.split_documents(documents)
 
-        embedding_model = HuggingFaceInstructEmbeddings(model_name="hkunlp/instructor-xl")
+        embedding_model= HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
         vector_store = FAISS.from_documents(chunks, embedding_model)
         vector_store.save_local("vector_index")
 
