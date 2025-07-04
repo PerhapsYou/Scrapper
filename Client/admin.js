@@ -1,5 +1,14 @@
-// Force logout when admin.html is reloaded or reopened
-sessionStorage.removeItem('slu_admin_auth');
+
+//clear session if this is a brand new visit (no referrer or navigation type = reload)
+const navType = performance.getEntriesByType("navigation")[0]?.type;
+
+if (!document.referrer && navType !== "navigate") {
+    sessionStorage.removeItem('slu_admin_auth');
+    console.log("[ADMIN] Session cleared on fresh load.");
+} else {
+    console.log("[ADMIN] Preserving session.");
+}
+
 
 class AdminPanel {
     constructor() {
@@ -91,12 +100,12 @@ class AdminPanel {
     }
 
     
-    showAdminPanel() {
+    async showAdminPanel() {
         this.loginSection.style.display = 'none';
         this.adminContent.style.display = 'block';
-        this.loadMenuData();
-        this.renderMenuList();
+        this.loadMenuData().then(() => this.renderMenuList());
     }
+
     
     logout() {
         sessionStorage.removeItem('slu_admin_auth');
@@ -115,13 +124,17 @@ class AdminPanel {
             for (const item of data.menu) {
                 this.menuData[item.id] = item;
             }
+            console.log("[ADMIN] Loaded menu data from DB:", this.menuData);
         } catch (error) {
-            console.error("Failed to fetch menu items:", error);
+            console.error("[ADMIN] Failed to fetch menu items:", error);
             this.menuData = {};
         }
     }
+
     
     renderMenuList() {
+        console.log("Rendering menu list...");
+        console.log("Current menuData:", this.menuData);
         this.menuList.innerHTML = '';
         
         Object.entries(this.menuData).forEach(([id, item]) => {
@@ -178,41 +191,49 @@ class AdminPanel {
     deleteMenuItem(id) {
         this.pendingDeleteId = id;
         const item = this.menuData[id];
+        console.log(`Delete requested for item ID ${id}:`, item);
         document.getElementById('confirmMessage').textContent = 
             `Are you sure you want to delete "${item.title}"? This action cannot be undone.`;
         this.confirmWindow.classList.add('active');
         this.pendingAction = 'delete';
+        console.log(`Confirmed deletion of item ${this.pendingDeleteId}`);
     }
     
     handleMenuSave(e) {
         e.preventDefault();
-        
+
         const title = document.getElementById('menuTitle').value.trim();
         const emoji = document.getElementById('menuEmoji').value.trim();
         const content = document.getElementById('menuContent').value.trim();
-        
+
         if (!title || !emoji || !content) {
             this.showStatus('Please fill in all fields.', 'error');
             return;
         }
-        
+
         const menuItem = { title, emoji, content };
-        
+
         if (this.currentEditingId) {
-            // Edit existing item
-            this.menuData[this.currentEditingId] = menuItem;
-            this.showStatus('Menu item updated successfully!', 'success');
+            // Editing
+            this.menuData[this.currentEditingId] = {
+                ...this.menuData[this.currentEditingId], // retain ID or any other keys
+                ...menuItem
+            };
+            delete this.menuData[this.currentEditingId].isNew; // ensure it's treated as existing
+            console.log(`[ADMIN] Edited item ${this.currentEditingId}:`, this.menuData[this.currentEditingId]);
         } else {
-            // Add new item
+            // Adding new item
             const newId = this.generateNewId();
+            menuItem.isNew = true;
             this.menuData[newId] = menuItem;
-            this.showStatus('Menu item added successfully!', 'success');
+            console.log(`[ADMIN] Added new item ${newId}:`, menuItem);
         }
-        
+
         this.renderMenuList();
         this.closeMenuWindow();
         this.markAsUnsaved();
     }
+
     
     generateNewId() {
         const existingIds = Object.keys(this.menuData).map(id => parseInt(id));
@@ -230,32 +251,62 @@ class AdminPanel {
         this.pendingAction = null;
     }
     
-    executeConfirmedAction() {
+    async executeConfirmedAction() {
         if (this.pendingAction === 'delete' && this.pendingDeleteId) {
+            try {
+                const res = await fetch(`http://localhost:8000/admin/menu/${this.pendingDeleteId}`, {
+                    method: "DELETE"
+                });
+                console.log(`[ADMIN] Deleted item ${this.pendingDeleteId}:`, await res.json());
+            } catch (err) {
+                console.error(`[ADMIN] Failed to delete item ${this.pendingDeleteId}`, err);
+            }
+
             delete this.menuData[this.pendingDeleteId];
             this.renderMenuList();
             this.showStatus('Menu item deleted successfully!', 'success');
             this.markAsUnsaved();
-        } else if (this.pendingAction === 'reset') {
-            this.menuData = this.getDefaultMenuData();
-            this.renderMenuList();
-            this.showStatus('Menu data has been reset to default.', 'info');
-            this.markAsUnsaved();
         }
-        
-        this.closeConfirmWindow();
     }
     
-    saveAllChanges() {
+    async saveAllChanges() {
         try {
-            localStorage.setItem('slu_chatbot_menu', JSON.stringify(this.menuData));
+            const entries = Object.entries(this.menuData);
+
+            for (const [id, item] of entries) {
+                if (item.isNew) {
+                    const res = await fetch("http://localhost:8000/admin/menu", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(item)
+                    });
+                    const result = await res.json();
+                    console.log(`[ADMIN] Created item:`, result);
+                } else {
+                    const res = await fetch(`http://localhost:8000/admin/menu/${id}`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(item)
+                    });
+                    const result = await res.json();
+                    console.log(`[ADMIN] Updated item ${id}:`, result);
+                }
+            }
+
             this.showStatus('All changes saved successfully!', 'success');
             this.markAsSaved();
+
+            // Optional: refetch from DB to verify
+            await this.loadMenuData();
+            this.renderMenuList();
+
         } catch (error) {
-            this.showStatus('Error saving changes. Please try again.', 'error');
-            console.error('Save error:', error);
+            console.error("[ADMIN] Save error:", error);
+            this.showStatus('Error saving changes to backend.', 'error');
         }
     }
+
+
     
     showResetConfirmation() {
         document.getElementById('confirmMessage').textContent = 
@@ -301,5 +352,9 @@ class AdminPanel {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    window.addEventListener("beforeunload", function (e) {
+        e.preventDefault();
+        e.returnValue = '';
+    });
     window.adminPanel = new AdminPanel();
 });
