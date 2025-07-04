@@ -17,6 +17,22 @@
     box-sizing: border-box;
 }
 
+.admin-login-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        padding: 6px 12px;
+        background-color: #444;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+
+    .admin-login-btn:hover {
+        background-color: #222;
+    }
+
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background: linear-gradient(135deg, var(--blue) 0%, var(--dark-blue) 100%);
