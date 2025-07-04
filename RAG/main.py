@@ -1,5 +1,5 @@
     #RAG SERVER
-from fastapi import FastAPI, Request, HTTPException #for db access
+from fastapi import FastAPI, Request, HTTPException, Body #for db access
 from fastapi.responses import JSONResponse
 import os # used to get user choice of LLM saved in device environment variable
 from fastapi.responses import StreamingResponse
@@ -8,6 +8,7 @@ import pymysql # for db access
 # local Imports
 from rag_pipeline import RAGPipeline  
 from build_vector_index import BuildVectorIndex
+import bcrypt
 
 from threading import Lock
 
@@ -73,7 +74,6 @@ def read_root():
     return {"message": "Welcome to the RAG API. Use the /query endpoint to ask questions."}    
 
 
-
 @app.post("/chat/stream")
 async def stream_response(request: Request):
     body = await request.json()
@@ -137,3 +137,92 @@ async def stop_generation():
     with stop_lock:
         stop_signal["stop"] = True
     return {"status": "stop requested"}
+
+# admin login
+@app.post("/login")
+async def login(request: Request):
+    body = await request.json()
+    username = body.get("username")
+    password = body.get("password")
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM accounts WHERE username=%s", (username,))
+        user = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        if user and bcrypt.checkpw(password.encode('utf-8'), user["password"].encode('utf-8')):
+            return {"status": "success", "message": "Login successful"}
+        else:
+            raise HTTPException(status_code=401, detail="Invalid credentials")
+    except Exception as e:
+        print("Login error:", e)
+        raise HTTPException(status_code=500, detail="Internal server error")
+    
+# Admin: CRUDS
+@app.get("/admin/menu")
+async def get_menu_items():
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, title, emoji, content FROM menu_item")
+        rows = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return {"menu": rows}
+    except Exception as e:
+        print("Menu fetch error:", e)
+        raise HTTPException(status_code=500, detail="Failed to fetch menu data")
+
+# POST new menu item
+@app.post("/admin/menu")
+async def add_menu_item(data: dict = Body(...)):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO menu_item (title, emoji, content) VALUES (%s, %s, %s)",
+            (data["title"], data["emoji"], data["content"])
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return {"status": "success"}
+    except Exception as e:
+        print("Insert error:", e)
+        raise HTTPException(status_code=500, detail="Failed to add menu item")
+
+# PUT update menu item
+@app.put("/admin/menu/{item_id}")
+async def update_menu_item(item_id: int, data: dict = Body(...)):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE menu_item SET title=%s, emoji=%s, content=%s WHERE id=%s",
+            (data["title"], data["emoji"], data["content"], item_id)
+        )
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return {"status": "updated"}
+    except Exception as e:
+        print("Update error:", e)
+        raise HTTPException(status_code=500, detail="Failed to update menu item")
+
+# DELETE menu item
+@app.delete("/admin/menu/{item_id}")
+async def delete_menu_item(item_id: int):
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM menu_item WHERE id=%s", (item_id,))
+        conn.commit()
+        cursor.close()
+        conn.close()
+        return {"status": "deleted"}
+    except Exception as e:
+        print("Delete error:", e)
+        raise HTTPException(status_code=500, detail="Failed to delete menu item")
