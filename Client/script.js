@@ -378,6 +378,14 @@ class SLUChatbot {
 document.addEventListener('DOMContentLoaded', async () => {
     window.sluChatbot = new SLUChatbot();
     await window.sluChatbot.init();
+
+    // Admin login redirect
+    const adminBtn = document.getElementById('adminLoginBtn');
+    if (adminBtn) {
+        adminBtn.addEventListener('click', () => {
+            window.location.href = 'admin.html';
+        });
+    }
     
     window.addEventListener('storage', async (e) => {
         if (e.key === 'slu_chatbot_menu') {
