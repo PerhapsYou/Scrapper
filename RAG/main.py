@@ -1,5 +1,5 @@
     #RAG SERVER
-from fastapi import FastAPI, Request, APIRouter #for db access
+from fastapi import FastAPI, Request, HTTPException #for db access
 from fastapi.responses import JSONResponse
 import os # used to get user choice of LLM saved in device environment variable
 from fastapi.responses import StreamingResponse
@@ -34,14 +34,14 @@ app.add_middleware(
 
 
 # Utility: database connection
-# def get_db_connection():
-#     return pymysql.connect(
-#         host="host.docker.internal", 
-#         user="root",
-#         password="",
-#         database="navi-bot",
-#         cursorclass=pymysql.cursors.DictCursor
-#     )
+def get_db_connection():
+    return pymysql.connect(
+        host="host.docker.internal", 
+        user="root",
+        password="root",
+        database="navi-bot",
+        cursorclass=pymysql.cursors.DictCursor
+    )
 
 # now user can choose between LLMs
 llm_backend = os.getenv("LLM_BACKEND", "ollama") 
@@ -55,13 +55,18 @@ async def health_check():
 # The menu route
 @app.get("/menu")
 async def get_menu():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT id, title, emoji, content FROM menu_item")
-    rows = cursor.fetchall()
-    cursor.close()
-    conn.close()
-    return {"menu": rows}
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, title, emoji, content FROM menu_item")
+        rows = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        return {"menu": rows}
+    except Exception as e:
+        print("DB Error:", e)  # This will print to your console
+        raise HTTPException(status_code=500, detail="Failed to fetch menu data")
+
 
 @app.get('/')
 def read_root():

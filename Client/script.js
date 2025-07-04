@@ -14,10 +14,7 @@ class SLUChatbot {
         this.stopBtn = document.getElementById('stopBtn');
         this.typingIndicator = document.getElementById('typingIndicator');
         this.menuOptions = document.getElementById('menuOptions');
-        
         this.isTyping = false;
-    
-
         this.abortController = null;
     }
 
@@ -38,7 +35,6 @@ class SLUChatbot {
         }
         
         this.menuOptions.style.display = 'none';
-        
         await this.showTypingIndicator();
         
         const messageDiv = document.createElement('div');
@@ -331,8 +327,11 @@ class SLUChatbot {
             const res = await fetch(`${this.actionsURL}/menu`);
             const data = await res.json();
 
-            this.menuData = data;
+            if (!data.menu) {
+                throw new Error("Menu data is missing");
+            }
 
+            this.menuData = data;
             console.log("Menu data loaded:", this.menuData);
 
             if (this.menuOptions.style.display !== 'none') {
@@ -343,6 +342,7 @@ class SLUChatbot {
             this.menuData = { menu: [] }; // fallback to empty to avoid crashes
         }
     }
+
 
     
     hideTypingIndicator() {
