@@ -1,12 +1,11 @@
 import os
 import requests
-import json
-import time
 import threading
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, urlparse
 from concurrent.futures import ThreadPoolExecutor
 import logging
+import argparse
 
 
 # Setup logging
@@ -178,4 +177,8 @@ def main():
         print(f"[Success] Data from {url} saved to data/{domain}.txt\n")
         
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--depth", type=int, default=2, help="Depth of crawling")
+    args = parser.parse_args()
+
+    run_scraper(depth=args.depth)

@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Scraping Panel</title>
+  <meta charset="UTF-8">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <div class="admin-container">
+    <h2>Scrape Knowledge Base</h2>
+
+    <form id="scrapeForm">
+      <label for="depth">Crawl Depth:</label>
+      <input type="number" id="depth" name="depth" value="2" min="1" max="5">
+      <br><br>
+      <button type="submit">Run Scraper</button>
+    </form>
+
+    <pre id="scrapeOutput" style="background:#eee;padding:1rem;overflow:auto;height:300px;"></pre>
+  </div>
+  
+  <h3>Upload Files (.pdf, .png, .jpg, .txt)</h3>
+  <form id="uploadForm">
+    <input type="file" id="uploadInput" name="files" multiple accept=".pdf,.png,.jpg,.jpeg,.txt">
+    <button type="submit">Upload</button>
+  </form>
+  <pre id="uploadOutput"></pre>
+
+  <h3>Edit Existing Knowledge Files</h3>
+  <select id="fileList"></select>
+  <textarea id="fileEditor" rows="15" cols="80"></textarea>
+  <button id="saveFileBtn">Save Changes</button>
+  <pre id="saveStatus"></pre>
+
+  <script>
+    document.getElementById("uploadForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const input = document.getElementById("uploadInput");
+        const formData = new FormData();
+        for (const file of input.files) {
+            formData.append("files", file);
+        }
+
+        const res = await fetch("http://localhost:8000/upload", {
+            method: "POST",
+            body: formData
+        });
+
+        const data = await res.json();
+        document.getElementById("uploadOutput").textContent = JSON.stringify(data.uploaded, null, 2);
+    });
+
+    async function loadFileList() {
+        const res = await fetch("http://localhost:8000/knowledge");
+        const data = await res.json();
+        const list = document.getElementById("fileList");
+        list.innerHTML = '';
+        data.files.forEach(f => {
+            const option = document.createElement("option");
+            option.value = f;
+            option.textContent = f;
+            list.appendChild(option);
+        });
+        }
+
+    document.getElementById("fileList").addEventListener("change", async () => {
+        const filename = document.getElementById("fileList").value;
+        const res = await fetch(`http://localhost:8000/knowledge/${filename}`);
+        const data = await res.json();
+        document.getElementById("fileEditor").value = data.content;
+    });
+
+    document.getElementById("saveFileBtn").addEventListener("click", async () => {
+        const filename = document.getElementById("fileList").value;
+        const content = document.getElementById("fileEditor").value;
+        const res = await fetch(`http://localhost:8000/knowledge/${filename}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ content })
+        });
+        const data = await res.json();
+        document.getElementById("saveStatus").textContent = "Saved: " + data.status;
+    });
+
+    loadFileList();
+  </script>
+</body>
+</html>

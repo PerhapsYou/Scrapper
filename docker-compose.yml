@@ -9,6 +9,7 @@ services:
       - "8000:8000"
     volumes:
       - ./RAG:/app
+      - ./Client:/app/Client
     networks:
       - chatbot_network
 
