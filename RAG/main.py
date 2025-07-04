@@ -81,6 +81,7 @@ async def stream_response(request: Request):
 
     # Extract query from tracker
     query = body.get("query", "")
+    previousQuestion = body.get("prevQuestion", "")
 
     if not query:
         return JSONResponse(
@@ -92,14 +93,20 @@ async def stream_response(request: Request):
     with stop_lock:
         stop_signal["stop"] = False
         
+    responsePhrase = ""
     # Token generator will not work when user asks the bot to stop RAG response
     async def token_generator():
-        for token in rag_pipeline.get_ollama_stream(query):
+        for token in rag_pipeline.get_ollama_stream(query, previousQuestion):
             with stop_lock:
                 if stop_signal["stop"]:
                     break
             yield f"data: {token}\n\n"
+            responsePhrase += token
 
+        print("response in main.py: " + responsePhrase)
+        if ("I don't know" in responsePhrase):
+            with open("knowledge/unknown.txt", "w") as file:
+                file.write(query)
     return StreamingResponse(token_generator(), media_type="text/event-stream")
 
 @app.post("/query")
@@ -118,11 +125,6 @@ async def query(request: Request):
 
     # 👇 RAG PIPELINE IMPLE
     response = rag_pipeline.get_ollama_stream(query)
-    print(response)
-
-    if ("I don't know" in response):
-        with open("knowledge/unknown.txt", "w") as file:
-            file.write(query)
     response = JSONResponse(
         status_code=200,
         content={"response" : response.get("result", "no answer found.")} 

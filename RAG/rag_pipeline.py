@@ -37,7 +37,7 @@ class RAGPipeline:
     
 
     # this method will stream the answer to the question
-    def get_ollama_stream(self, question: str):
+    def get_ollama_stream(self, question: str, prevQuestion: str = ""):
         start = time.time()
 
         docs = self.retriever.invoke(question)
@@ -46,23 +46,47 @@ class RAGPipeline:
 
         context = "\n\n".join(doc.page_content for doc in docs)
         print(context)
-        prompt = f"""Answer the question using only the information provided below.
-                Context:
-                {context}
 
-                Question:
-                {question}
+        if (prevQuestion == ""):
+            prompt = f"""Answer the question using only the information provided below.
+                    Context:
+                    {context}
 
-                Instructions:
-                - Answer the question without adding any introductory or concluding phrases. 
-                - Do not repeat or refer to the context.
-                - If the answer cannot be determined from the context, respond with: "I'm sorry, I don't know." 
-                - Be concise and accurate.
-                - In writing your answer make sure there are no dashes.
-                - Return your response as markdown.
-                - Do not output in a single paragraph.
-                - Use dashes instead of asterisks in the markdown.
+                    Question:
+                    {question}
+
+                    Instructions:
+                    - Answer the question without adding any introductory or concluding phrases. 
+                    - Do not repeat or refer to the context.
+                    - If the answer cannot be determined from the context, respond with: "I'm sorry, I don't know." 
+                    - Be concise and accurate.
+                    - In writing your answer make sure there are no dashes.
+                    - Return your response as markdown.
+                    - Do not output in a single paragraph.
+                    - Use dashes instead of asterisks in the markdown.
                 """
+        else:
+            prompt = f"""Answer the question using only the information provided below.
+                    Previous Questions:
+                        {prevQuestion}
+
+                    Context:
+                    {context}
+
+                    Question:
+                    {question}
+
+                    Instructions:
+                    - Answer the question without adding any introductory or concluding phrases. 
+                    - Do not repeat or refer to the context.
+                    - If the answer cannot be determined from the context, respond with: "I'm sorry, I don't know." 
+                    - Be concise and accurate.
+                    - In writing your answer make sure there are no dashes.
+                    - Return your response as markdown.
+                    - Do not output in a single paragraph.
+                    - Use dashes instead of asterisks in the markdown.
+                    - If the previously asked question provides context make sure to use it.
+                """             
 
         for chunk in self.llmModel.stream(prompt):
             yield chunk.content
