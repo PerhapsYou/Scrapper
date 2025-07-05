@@ -71,24 +71,26 @@ class RAGPipeline:
             
     # this method teaches the model to preprocess raw text data
     def paraphrase_with_ollama(self, raw: str, filename: str = ""):
-        prompt = f"""Paraphrase the following academic or institutional content. Make it more concise and easier to understand, while preserving all factual details.
+        prompt = f"""You are a helpful assistant. Paraphrase the following text to make it **concise, readable, and well-organized**, especially for academic or institutional content.
+
+    Use clear bullet points or headings if needed, but:
+    - Do **not** introduce or explain what you're doing.
+    - Do **not** add summaries like "Here is a paraphrased version".
+    - Do **not** invent section headers like "Calendar Highlights" unless present in the original.
+    - Keep all factual details intact.
+    - Maintain the structure (e.g. semester-wise, event-wise).
+    - Your output should look like a refined version of the original, not a summary.
 
     Text:
     \"\"\"
     {raw}
     \"\"\"
 
-    Instructions:
-    - DO NOT introduce or summarize the content.
-    - DO NOT write "Here is a paraphrased version".
-    - DO NOT add headers like "Calendar Highlights" or "Summary".
-    - Keep the formatting in clean, bullet-style or date-wise format.
-    - Maintain chronological or categorical structure if present.
-    - Output only the rewritten content. No extra commentary.
+    Return only the improved version below:
+    """
 
-    Paraphrased Output:"""
-        
         output = ""
         for chunk in self.llmModel.stream(prompt):
             output += chunk.content
         return output.strip()
+
