@@ -70,26 +70,25 @@ class RAGPipeline:
             yield chunk.content
             
     # this method teaches the model to preprocess raw text data
-    def paraphrase_with_ollama(self, raw_text: str, filename: str = "") -> str:
-        max_chars = 1500  # ~800 tokens
-        chunks = textwrap.wrap(raw_text, width=max_chars)
-        results = []
+    def paraphrase_with_ollama(self, raw: str, filename: str = ""):
+        prompt = f"""Paraphrase the following academic or institutional content. Make it more concise and easier to understand, while preserving all factual details.
 
-        print(f"📝 Paraphrasing {filename}: {len(chunks)} chunks")
+    Text:
+    \"\"\"
+    {raw}
+    \"\"\"
 
-        for i, chunk in enumerate(chunks):
-            try:
-                prompt = f"""Paraphrase the following content for clarity and conciseness:\n\n{chunk}\n\nReturn only the rephrased version."""
-                output = ""
+    Instructions:
+    - DO NOT introduce or summarize the content.
+    - DO NOT write "Here is a paraphrased version".
+    - DO NOT add headers like "Calendar Highlights" or "Summary".
+    - Keep the formatting in clean, bullet-style or date-wise format.
+    - Maintain chronological or categorical structure if present.
+    - Output only the rewritten content. No extra commentary.
 
-                for token in self.llmModel.stream(prompt):
-                    output += token.content
-
-                print(f"✅ Chunk {i+1}/{len(chunks)} done ({len(output)} chars)")
-                results.append(output.strip())
-
-            except Exception as e:
-                print(f"⚠️ Error in chunk {i+1}: {e}")
-                continue
-
-        return "\n\n".join(results)
+    Paraphrased Output:"""
+        
+        output = ""
+        for chunk in self.llmModel.stream(prompt):
+            output += chunk.content
+        return output.strip()
