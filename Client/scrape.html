@@ -32,6 +32,11 @@
   <button id="saveFileBtn">Save Changes</button>
   <pre id="saveStatus"></pre>
 
+  <h3>Vector Indexing</h3>
+  <button id="buildVectorBtn">📦 Build Vector Index</button>
+  <pre id="vectorStatus"></pre>
+
+
   <script>
     document.getElementById("uploadForm").addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -81,6 +86,23 @@
         const data = await res.json();
         document.getElementById("saveStatus").textContent = "Saved: " + data.status;
     });
+
+    document.getElementById("buildVectorBtn").addEventListener("click", async () => {
+        const statusEl = document.getElementById("vectorStatus");
+        statusEl.textContent = "⏳ Building vector index...";
+
+        try {
+            const res = await fetch("http://localhost:8000/trigger/index", {
+            method: "POST"
+            });
+            const data = await res.json();
+            statusEl.textContent = `✅ Vector index built. Total chunks: ${data.chunks || "unknown"}`;
+        } catch (err) {
+            statusEl.textContent = "❌ Failed to build vector index.";
+            console.error(err);
+        }
+    });
+
 
     loadFileList();
   </script>

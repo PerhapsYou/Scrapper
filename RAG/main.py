@@ -9,6 +9,10 @@ import pymysql # for db access
 from rag_pipeline import RAGPipeline  
 from build_vector_index import BuildVectorIndex
 import bcrypt, subprocess, shutil
+# Scraper functions
+from scrapers.web_scraper import run_scraper
+from scrapers.pdf_scraper import scan_all_pdfs
+from scrapers.image_scraper import scan_images
 
 from threading import Lock
 
@@ -18,7 +22,7 @@ stop_lock = Lock()
 
 # Build Knowledge. Can comment out this section if knowledge already built
 build_vector_index = BuildVectorIndex()
-build_vector_index.run()
+build_vector_index.build_index()
 
 
 # Initialize FastAPI app
@@ -48,6 +52,35 @@ def get_db_connection():
 llm_backend = os.getenv("LLM_BACKEND", "ollama") 
 # Initialize RAG pipeline: now RAGPipelines has one argument llm_backend
 rag_pipeline = RAGPipeline(llm_backend="ollama")
+os.makedirs("knowledge/cleaned", exist_ok=True)
+
+#scraper: clean the data by paraphrasing?
+@app.post("/upload")
+async def upload_files(files: list[UploadFile] = File(...)):
+    upload_folder = "knowledge"
+    saved = []
+
+    for file in files:
+        ext = file.filename.split(".")[-1].lower()
+        if ext in ["pdf", "png", "jpg", "jpeg", "txt"]:
+            save_path = os.path.join(upload_folder, file.filename)
+            with open(save_path, "wb") as f:
+                shutil.copyfileobj(file.file, f)
+            saved.append(file.filename)
+
+            # Optional: If it's a .txt, immediately clean it
+            if ext == "txt":
+                with open(save_path, "r", encoding="utf-8") as f:
+                    raw = f.read()
+
+                cleaned = rag.paraphrase_with_ollama(raw, file.filename)
+                clean_path = os.path.join("knowledge/cleaned", file.filename)
+                with open(clean_path, "w", encoding="utf-8") as cf:
+                    cf.write(cleaned)
+        else:
+            continue
+
+    return {"uploaded": saved}
 
 @app.get("/health")
 async def health_check():
@@ -297,3 +330,41 @@ async def upload_files(files: list[UploadFile] = File(...)):
             continue
 
     return {"uploaded": saved}
+
+
+@app.post("/trigger/scrape")
+async def trigger_web_scraper():
+    run_scraper(urls_path="urls.txt", output_dir="knowledge/txt", depth=2)
+    return {"status": "web scrape done"}
+
+@app.post("/trigger/pdf")
+async def trigger_pdf_scanner():
+    scan_all_pdfs()
+    return {"status": "pdf scan done"}
+
+@app.post("/trigger/image")
+async def trigger_image_scanner():
+    scan_images(folder="knowledge/txt")
+    return {"status": "image scan done"}
+
+@app.post("/trigger/clean")
+async def trigger_cleaning():
+    os.makedirs("knowledge/cleaned", exist_ok=True)
+    rag = RAGPipeline()
+    count = 0
+    for filename in os.listdir("knowledge/txt"):
+        if filename.endswith(".txt"):
+            with open(f"knowledge/txt/{filename}", "r", encoding="utf-8") as f:
+                raw = f.read()
+            cleaned = rag.paraphrase_with_ollama(raw, filename)
+            with open(f"knowledge/cleaned/{filename}", "w", encoding="utf-8") as f:
+                f.write(cleaned)
+            count += 1
+    return {"status": "cleaning complete", "files": count}
+
+@app.post("/trigger/index")
+async def trigger_vector_index():
+    builder = BuildVectorIndex()
+    num_chunks = builder.build_index()  # Capture return value
+    return {"status": "vector index built", "chunks": num_chunks}
+

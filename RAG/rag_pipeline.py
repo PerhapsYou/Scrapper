@@ -4,6 +4,8 @@ from langchain_ollama import ChatOllama
 import torch
 
 import time
+import textwrap # for paraphrasing the knowledge base
+
 
 llmModel = None  # Initialize llmModel to be used later in the class
 
@@ -66,3 +68,28 @@ class RAGPipeline:
 
         for chunk in self.llmModel.stream(prompt):
             yield chunk.content
+            
+    # this method teaches the model to preprocess raw text data
+    def paraphrase_with_ollama(self, raw_text: str, filename: str = "") -> str:
+        max_chars = 1500  # ~800 tokens
+        chunks = textwrap.wrap(raw_text, width=max_chars)
+        results = []
+
+        print(f"📝 Paraphrasing {filename}: {len(chunks)} chunks")
+
+        for i, chunk in enumerate(chunks):
+            try:
+                prompt = f"""Paraphrase the following content for clarity and conciseness:\n\n{chunk}\n\nReturn only the rephrased version."""
+                output = ""
+
+                for token in self.llmModel.stream(prompt):
+                    output += token.content
+
+                print(f"✅ Chunk {i+1}/{len(chunks)} done ({len(output)} chars)")
+                results.append(output.strip())
+
+            except Exception as e:
+                print(f"⚠️ Error in chunk {i+1}: {e}")
+                continue
+
+        return "\n\n".join(results)
