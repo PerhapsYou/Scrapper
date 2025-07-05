@@ -93,45 +93,53 @@ async def stream_response(request: Request):
     with stop_lock:
         stop_signal["stop"] = False
         
-    responsePhrase = ""
-    # Token generator will not work when user asks the bot to stop RAG response
-    async def token_generator():
-        for token in rag_pipeline.get_ollama_stream(query, previousQuestion):
-            with stop_lock:
-                if stop_signal["stop"]:
-                    break
-            yield f"data: {token}\n\n"
-            responsePhrase += token
-
-        print("response in main.py: " + responsePhrase)
-        if ("I don't know" in responsePhrase):
-            with open("knowledge/unknown.txt", "w") as file:
-                file.write(query)
-    return StreamingResponse(token_generator(), media_type="text/event-stream")
-
-@app.post("/query")
-async def query(request: Request):
-    body = await request.json()
-    print("Received body:", body) 
-
-    # Extract query from tracker
-    query = body.get("query", "")
-
-    if not query:
-        return JSONResponse(
-            status_code=200,
-            content={"responses": [{"query": "No query found in message."}], "events": []}
-        )
-
+    
     # 👇 RAG PIPELINE IMPLE
     response = rag_pipeline.get_ollama_stream(query)
+    if ("I don't know" in response):
+        with open("knowledge/unknown.txt", "a") as file:
+            file.write(query + "\n")
     response = JSONResponse(
         status_code=200,
-        content={"response" : response.get("result", "no answer found.")} 
+        content={"response" : response} 
         )
     print(response)
 
-    return response
+@app.post("/predict")
+async def predict_endpoint(request: Request):
+    body = await request.json()
+    reply = rag_pipeline.predict( 
+        message=request.get("message", ""), 
+        distinct_id=request.get("distinct_id",""), 
+        session_id=request.get("session_id", "")
+    )
+    return {"response": reply}
+
+
+
+# @app.post("/query")
+# async def query(request: Request):
+#     body = await request.json()
+#     print("Received body:", body) 
+
+#     # Extract query from tracker
+#     query = body.get("query", "")
+
+#     if not query:
+#         return JSONResponse(
+#             status_code=200,
+#             content={"responses": [{"query": "No query found in message."}], "events": []}
+#         )
+
+#     # 👇 RAG PIPELINE IMPLE
+#     response = rag_pipeline.get_ollama_stream(query)
+#     response = JSONResponse(
+#         status_code=200,
+#         content={"response" : response.get("result", "no answer found.")} 
+#         )
+#     print(response)
+
+#     return response
 
 #when user clicks on stop button, stop RAG respose
 @app.post("/stop")
