@@ -4,6 +4,8 @@ from langchain_ollama import ChatOllama
 import torch
 
 import time
+import textwrap # for paraphrasing the knowledge base
+
 
 llmModel = None  # Initialize llmModel to be used later in the class
 
@@ -66,3 +68,29 @@ class RAGPipeline:
 
         for chunk in self.llmModel.stream(prompt):
             yield chunk.content
+            
+    # this method teaches the model to preprocess raw text data
+    def paraphrase_with_ollama(self, raw: str, filename: str = ""):
+        prompt = f"""You are a helpful assistant. Paraphrase the following text to make it **concise, readable, and well-organized**, especially for academic or institutional content.
+
+    Use clear bullet points or headings if needed, but:
+    - Do **not** introduce or explain what you're doing.
+    - Do **not** add summaries like "Here is a paraphrased version".
+    - Do **not** invent section headers like "Calendar Highlights" unless present in the original.
+    - Keep all factual details intact.
+    - Maintain the structure (e.g. semester-wise, event-wise).
+    - Your output should look like a refined version of the original, not a summary.
+
+    Text:
+    \"\"\"
+    {raw}
+    \"\"\"
+
+    Return only the improved version below:
+    """
+
+        output = ""
+        for chunk in self.llmModel.stream(prompt):
+            output += chunk.content
+        return output.strip()
+
