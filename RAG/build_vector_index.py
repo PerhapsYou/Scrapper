@@ -51,10 +51,16 @@ class BuildVectorIndex:
         if not documents:
             raise ValueError("No documents found. Please check the directory and file format.")
 
-        splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+        #1000 & 200
+        splitter = RecursiveCharacterTextSplitter(    
+            separators=["\n\n", "\n", ".", " "],  # favors logical breaks
+            chunk_size=512,
+            chunk_overlap=50
+        )
+        
         chunks = splitter.split_documents(documents)
 
-        embedding_model= HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+        embedding_model= HuggingFaceEmbeddings(model_name="BAAI/bge-base-en-v1.5")
         vector_store = FAISS.from_documents(chunks, embedding_model)
         vector_store.save_local("vector_index")
 

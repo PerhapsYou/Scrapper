@@ -150,7 +150,6 @@ threadpoolctl==3.6.0
 toml==0.10.2
 tomli==2.2.1
 tomlkit==0.13.3
-torch==2.2.2
 tqdm==4.67.1
 traitlets==5.14.3
 trove-classifiers==2025.5.9.12
@@ -176,3 +175,4 @@ InstructorEmbedding==1.0.1
 sentence-transformers==2.2.2
 huggingface-hub==0.14.1
 transformers==4.30.2
+weaviate-client

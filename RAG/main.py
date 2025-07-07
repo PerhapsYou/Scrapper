@@ -12,6 +12,11 @@ import bcrypt
 
 from threading import Lock
 
+
+import weaviate
+from weaviate import WeaviateClient
+from weaviate.classes.config import Configure
+
 #signal when to stop RAG response
 stop_signal = {"stop": False}
 stop_lock = Lock()
@@ -27,7 +32,7 @@ app = FastAPI()
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8080"],  # You can use ["*"] for dev
+    allow_origins=["http://localhost:3000"],  # You can use ["*"] for dev
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -108,38 +113,14 @@ async def stream_response(request: Request):
 @app.post("/predict")
 async def predict_endpoint(request: Request):
     body = await request.json()
+    print("reached /predict with the ff body: ", body)
     reply = rag_pipeline.predict( 
-        message=request.get("message", ""), 
-        distinct_id=request.get("distinct_id",""), 
-        session_id=request.get("session_id", "")
+        message=body.get("message", ""), 
+        distinct_id=body.get("distinct_id",""), 
+        session_id=body.get("session_id", "")
     )
     return {"response": reply}
 
-
-
-# @app.post("/query")
-# async def query(request: Request):
-#     body = await request.json()
-#     print("Received body:", body) 
-
-#     # Extract query from tracker
-#     query = body.get("query", "")
-
-#     if not query:
-#         return JSONResponse(
-#             status_code=200,
-#             content={"responses": [{"query": "No query found in message."}], "events": []}
-#         )
-
-#     # 👇 RAG PIPELINE IMPLE
-#     response = rag_pipeline.get_ollama_stream(query)
-#     response = JSONResponse(
-#         status_code=200,
-#         content={"response" : response.get("result", "no answer found.")} 
-#         )
-#     print(response)
-
-#     return response
 
 #when user clicks on stop button, stop RAG respose
 @app.post("/stop")

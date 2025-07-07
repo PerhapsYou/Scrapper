@@ -220,7 +220,8 @@ async processMessage(message) {
         this.isTyping = false;
     } catch (error) {
         console.error(error);
-        await this.addBotMessage("Sorry, something went wrong.");
+       // await this.addBotMessage("Sorry, something went wrong.");
+        await this.addBotMessage(error);
         this.toggleButtons(false);
         this.isTyping = false;
     }
