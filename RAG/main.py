@@ -22,8 +22,8 @@ stop_signal = {"stop": False}
 stop_lock = Lock()
 
 # Build Knowledge. Can comment out this section if knowledge already built
-build_vector_index = BuildVectorIndex()
-build_vector_index.run()
+#build_vector_index = BuildVectorIndex()
+#build_vector_index.run()
 
 
 # Initialize FastAPI app

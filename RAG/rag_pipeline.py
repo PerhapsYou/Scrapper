@@ -37,7 +37,7 @@ class RAGPipeline:
         except KeyError:
             raise ValueError("Please set POSTHOG_API_KEY and POSTHOG_HOST environment variables")
         
-      
+      #--------------------------------  START ------------------------------------------------------
         # client = weaviate.connect_to_custom(
         #     http_host="weaviate",         # your Docker service name or localhost
         #     http_port=8080,
@@ -47,7 +47,7 @@ class RAGPipeline:
         #     grpc_secure=False
         # )
         # questions = client.collections.create(
-        #     name="NaviBot10",
+        #     name="NaviBot22",
         #     vectorizer_config=Configure.Vectorizer.text2vec_ollama(     # Configure the Ollama embedding integration
         #         api_endpoint="http://host.docker.internal:11434",       # Allow Weaviate from within a Docker container to contact your Ollama instance
         #         model="nomic-embed-text",                               # The model to use
@@ -68,49 +68,69 @@ class RAGPipeline:
         #     grpc_secure=False
         # )
 
+        # navibot = client.collections.get("NaviBot22")
+        # # Step 4: Read and parse all JSON files
         # data = []
-        # for filename in os.listdir("knowledge/txt"):
-        #     if filename.endswith(".txt"):
-        #         filepath = os.path.join("knowledge/txt", filename)
-        #         with open(filepath, "r", encoding="utf-8") as f:
-        #             text = f.read()
-        #             data.append({
-        #                 "filename": filename,
-        #                 "content": text
-        #             })
+        # for filename in os.listdir("knowledge/json"):
+        #     if filename.endswith(".json"):
+        #         filepath = os.path.join("knowledge/json", filename)
+        #         try:
+        #             with open(filepath, "r", encoding="utf-8") as f:
+        #                 json_data = json.load(f)
 
-        # navibot = client.collections.get("NaviBot10")
+        #                 if isinstance(json_data, dict):
+        #                     title = json_data.get("title", filename)
+        #                     for key, value in json_data.items():
+        #                         if key == "title":
+        #                             continue  # Already stored as 'title'
 
+        #                         # Skip empty content
+        #                         if not value:
+        #                             continue
+
+        #                         chunk = {
+        #                             "title": f"{title} - {key}".strip(),
+        #                             "answer": json.dumps(value, indent=2),
+        #                             "category": filename
+        #                         }
+        #                         data.append(chunk)
+        #                 else:
+        #                     print(f"Skipping {filename}: not a valid JSON object.")
+
+        #         except json.JSONDecodeError as e:
+        #             print(f"Failed to decode {filename}: {e}")
+
+        # # Insert chunks in batches
         # with navibot.batch.fixed_size(batch_size=200) as batch:
         #     for item in data:
-        #         batch.add_object(
-        #             {
-        #             "title": item["content"][:300],   # use filename as question for now
-        #             "answer": item["content"],      # actual text content
-        #             "category": item["filename"]       # arbitrary category
-        #             }
-        #         )
+        #         batch.add_object({
+        #             "title": item["title"][:300],
+        #             "answer": item["answer"],
+        #             "category": item["category"]
+        #         })
         #         if batch.number_errors > 10:
         #             print("Batch import stopped due to excessive errors.")
         #             break
 
-        # failed_objects = navibot.batch.failed_objects
-        # if failed_objects:
-        #     print(f"Number of failed imports: {len(failed_objects)}")
-        #     print(f"First failed object: {failed_objects[0]}")
+        #         failed_objects = navibot.batch.failed_objects
+        #         if failed_objects:
+        #             print(f"Number of failed imports: {len(failed_objects)}")
+        #             print(f"First failed object: {failed_objects[0]}")
 
-        #  # Fetch and print all objects
-        # questions = client.collections.get("NaviBot10")  # You can increase the limit as needed
+        #         # Fetch and print all objects
+        #         questions = client.collections.get("NaviBot22")  # You can increase the limit as needed
 
-        # # Print nicely
-        # results = questions.query.fetch_objects(limit=100)
+        #         # Print nicely
+        #         results = questions.query.fetch_objects(limit=100)
 
-        # for obj in results.objects:
-        #     print("UUID:", obj.uuid)
-        #     print("Properties:", obj.properties)
-        #     print("-" * 40)
+        #         for obj in results.objects:
+        #             print("UUID:", obj.uuid)
+        #             print("Properties:", obj.properties)
+        #             print("-" * 40)
 
         # client.close()  # Free up resources
+
+        #--------------------------------  END ------------------------------------------------------
 
         try:
             # Select LLM backend
@@ -180,18 +200,25 @@ class RAGPipeline:
             grpc_secure=False
         )
 
-        questions = client.collections.get("NaviBot10")
+        questions = client.collections.get("NaviBot22")
 
         response = questions.query.near_text(
                     query=question,
-                    limit=2
+                    limit=2,
+                    distance=0.50,
+                    return_metadata=["distance"]  
         )
+
+        questions = client.collections.get("NaviBot22")  # This should be the collection where you ingested the data
+
+
         client.close()
         print("response: ", response)
 
 
         context = "\n\n".join([
-            f"Document {i+1}:\n{obj.properties['answer']}" for i, obj in enumerate(response.objects)
+            f"{obj.properties['title'].split(' _ ')[-1]} - Document {i+1}:\n{obj.properties['answer']}  (Distance: {obj.metadata.distance:.4f}):"
+            for i, obj in enumerate(response.objects)
         ])
 
         prompt = f"""
