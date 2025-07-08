@@ -167,7 +167,6 @@ async def stop_generation():
         stop_signal["stop"] = True
     return {"status": "stop requested"}
 
-# admin login
 @app.post("/login")
 async def login(request: Request):
     body = await request.json()
@@ -185,7 +184,13 @@ async def login(request: Request):
         if user and bcrypt.checkpw(password.encode('utf-8'), user["password"].encode('utf-8')):
             return {"status": "success", "message": "Login successful"}
         else:
+            # Let this fall through directly
             raise HTTPException(status_code=401, detail="Invalid credentials")
+
+    except HTTPException as he:
+        # Preserve HTTP errors (like 401)
+        raise he
+
     except Exception as e:
         print("Login error:", e)
         raise HTTPException(status_code=500, detail="Internal server error")

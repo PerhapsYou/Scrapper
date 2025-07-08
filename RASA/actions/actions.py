@@ -73,7 +73,7 @@ class ActionRAGFallback(Action):
 
         try:
 
-            rag_url = "http://rag_server:8000/chat/stream"
+            rag_url = "http://rag_server:8000/predict"
             response = requests.post(
                 rag_url,
                 json={"query": user_message, 
