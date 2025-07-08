@@ -47,7 +47,7 @@ class RAGPipeline:
             grpc_secure=False
         )
         questions = client.collections.create(
-            name="NaviBot38",
+            name="NaviBot40",
             vectorizer_config=Configure.Vectorizer.text2vec_ollama(     # Configure the Ollama embedding integration
                 api_endpoint="http://host.docker.internal:11434",       # Allow Weaviate from within a Docker container to contact your Ollama instance
                 model="nomic-embed-text",                               # The model to use
@@ -68,7 +68,7 @@ class RAGPipeline:
             grpc_secure=False
         )
 
-        navibot = client.collections.get("NaviBot38")
+        navibot = client.collections.get("NaviBot40")
         # Step 4: Read and parse all JSON files
         data = []
         for filename in os.listdir("knowledge/json"):
@@ -118,7 +118,7 @@ class RAGPipeline:
                     print(f"First failed object: {failed_objects[0]}")
 
                 # Fetch and print all objects
-                questions = client.collections.get("NaviBot38")  # You can increase the limit as needed
+                questions = client.collections.get("NaviBot40")  # You can increase the limit as needed
 
                 # Print nicely
                 results = questions.query.fetch_objects(limit=100)
@@ -138,7 +138,7 @@ class RAGPipeline:
             self.llmModel = ChatOllama(
                 model="llama3:8b", 
                 base_url="http://ollama:11434",
-                temperature=0.7,
+                temperature=0.4,
                 streaming=True  # Enable streaming
                 )
             self.memory = ConversationBufferMemory()
@@ -200,7 +200,7 @@ class RAGPipeline:
             grpc_secure=False
         )
 
-        questions = client.collections.get("NaviBot38")
+        questions = client.collections.get("NaviBot40")
 
         response = questions.query.near_text(
                     query=question,
@@ -209,7 +209,7 @@ class RAGPipeline:
                     return_metadata=["distance"]  
         )
 
-        questions = client.collections.get("NaviBot38")  # This should be the collection where you ingested the data
+        questions = client.collections.get("NaviBot40")  # This should be the collection where you ingested the data
 
 
         client.close()
