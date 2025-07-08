@@ -1,8 +1,18 @@
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_ollama import ChatOllama
+from langchain.chains import ConversationChain
+from langchain.memory import ConversationBufferMemory
+from langchain_core.output_parsers import StrOutputParser
 import torch
+import uuid
+import posthog
+import requests, json, time, os
 
+
+import weaviate
+from weaviate import WeaviateClient
+from weaviate.classes.config import Configure
 import time
 import textwrap # for paraphrasing the knowledge base
 
@@ -13,7 +23,8 @@ class RAGPipeline:
     def __init__(self, llm_backend: str = "ollama"):
         # Load embeddings and vector store
         self.embedding = HuggingFaceEmbeddings(
-             model_name="sentence-transformers/all-MiniLM-L6-v2",
+             model_name="BAAI/bge-base-en-v1.5",
+             encode_kwargs={"normalize_embeddings": True},
             # If you have a GPU, set device to "cuda", otherwise use "cpu"
              model_kwargs={"device": "cuda" if torch.cuda.is_available() else "cpu"} 
              )
@@ -22,75 +33,208 @@ class RAGPipeline:
             self.embedding,
             allow_dangerous_deserialization=True
         )
-        self.retriever = self.vector_store.as_retriever(k=5)
-
-        # Select LLM backend
-        print("✅ Using Ollama (llama3) as LLM")
+        self.retriever = self.vector_store.as_retriever(search_kwargs = {"k" : 5})
         try:
+            posthog.api_key = "phc_eZjTrWqsuZNwwsm6hURdjgrFeRMSdSD1Rjx8i3uHZFu" #"phx_hNGq3WucDTsZWAlzpj2WdJV2H5hFGbHroGnyuaQG7fGq25C" #os.environ["POSTHOG_API_KEY"]
+            posthog.host = "https://app.posthog.com" #os.environ['POSTHOG_HOST'] 
+        except KeyError:
+            raise ValueError("Please set POSTHOG_API_KEY and POSTHOG_HOST environment variables")
+        
+      #--------------------------------  START ------------------------------------------------------
+        client = weaviate.connect_to_custom(
+            http_host="weaviate",         # your Docker service name or localhost
+            http_port=8080,
+            http_secure=False,
+            grpc_host="weaviate",         # same as http_host if gRPC isn't separately routed
+            grpc_port=50051,
+            grpc_secure=False
+        )
+        questions = client.collections.create(
+            name="NaviBot40",
+            vectorizer_config=Configure.Vectorizer.text2vec_ollama(     # Configure the Ollama embedding integration
+                api_endpoint="http://host.docker.internal:11434",       # Allow Weaviate from within a Docker container to contact your Ollama instance
+                model="nomic-embed-text",                               # The model to use
+            ),
+            generative_config=Configure.Generative.ollama(              # Configure the Ollama generative integration
+                api_endpoint="http://host.docker.internal:11434",       # Allow Weaviate from within a Docker container to contact your Ollama instance
+                model="llama3.2",                                       # The model to use
+            )
+        )
+        client.close()  # Free up resources
+
+        client = weaviate.connect_to_custom(
+            http_host="weaviate",         # your Docker service name or localhost
+            http_port=8080,
+            http_secure=False,
+            grpc_host="weaviate",         # same as http_host if gRPC isn't separately routed
+            grpc_port=50051,
+            grpc_secure=False
+        )
+
+        navibot = client.collections.get("NaviBot40")
+        # Step 4: Read and parse all JSON files
+        data = []
+        for filename in os.listdir("knowledge/json"):
+            if filename.endswith(".json"):
+                filepath = os.path.join("knowledge/json", filename)
+                try:
+                    with open(filepath, "r", encoding="utf-8") as f:
+                        json_data = json.load(f)
+
+                        if isinstance(json_data, dict):
+                            title = json_data.get("title", filename)
+                            for key, value in json_data.items():
+                                if key == "title":
+                                    continue  # Already stored as 'title'
+
+                                # Skip empty content
+                                if not value:
+                                    continue
+
+                                chunk = {
+                                    "title": f"{title} - {key}".strip(),
+                                    "answer": json.dumps(value, indent=2),
+                                    "category": filename
+                                }
+                                data.append(chunk)
+                        else:
+                            print(f"Skipping {filename}: not a valid JSON object.")
+
+                except json.JSONDecodeError as e:
+                    print(f"Failed to decode {filename}: {e}")
+
+        # Insert chunks in batches
+        with navibot.batch.fixed_size(batch_size=200) as batch:
+            for item in data:
+                batch.add_object({
+                    "title": item["title"][:300],
+                    "answer": item["answer"],
+                    "category": item["category"]
+                })
+                if batch.number_errors > 10:
+                    print("Batch import stopped due to excessive errors.")
+                    break
+
+                failed_objects = navibot.batch.failed_objects
+                if failed_objects:
+                    print(f"Number of failed imports: {len(failed_objects)}")
+                    print(f"First failed object: {failed_objects[0]}")
+
+                # Fetch and print all objects
+                questions = client.collections.get("NaviBot40")  # You can increase the limit as needed
+
+                # Print nicely
+                results = questions.query.fetch_objects(limit=100)
+
+                # for obj in results.objects:
+                #     print("UUID:", obj.uuid)
+                #     print("Properties:", obj.properties)
+                #     print("-" * 40)
+
+        client.close()  # Free up resources
+
+        #--------------------------------  END ------------------------------------------------------
+
+        try:
+            # Select LLM backend
+            print("Using Ollama (llama3) as LLM")
             self.llmModel = ChatOllama(
-                model="llama3", 
+                model="llama3:8b", 
                 base_url="http://ollama:11434",
-                temperature=0.5,
+                temperature=0.4,
                 streaming=True  # Enable streaming
                 )
+            self.memory = ConversationBufferMemory()
+            self.chain = ConversationChain(llm=self.llmModel, memory=self.memory, verbose=True)
+            
             print("Connecting to Ollama at:", self.llmModel.base_url)
         except Exception as e:
                 raise RuntimeError("Ollama is not running. Please start it with `ollama run llama3`") from e
+        
+        
+    def task(self, distinct_id, input, output, event="llm-task", timestamp=None, session_id=None, properties=None):
+        props = properties if properties else {}
+        props["$llm_input"] = input
+        props["$llm_output"] = output
+
+        if session_id:
+            props["$session_id"] = session_id
+
+        posthog.capture(
+            distinct_id=distinct_id, event=event, properties=props, timestamp=timestamp, disable_geoip=False
+        )
+
+    
+    def predict(self, message: str, distinct_id: str, session_id: str) -> str:
+        # 1. Call Rasa
+        try:
+            # 2. Extract Rasa response
+            reply_text = self.get_ollama_stream(question=message)
+        except Exception as e:
+            print(f"Error calling Rasa: {e}")
+            return "Sorry, I couldn't reach the assistant."
+
+
+        # 3. Track in PostHog
+        try:
+            self.task(
+                distinct_id=distinct_id,
+                input=message,
+                output=reply_text,
+                session_id=session_id,
+                properties={"source": "rasa-web-client"}
+            )
+        except Exception as e:
+            print(f"PostHog tracking failed: {e}")
+
+        return reply_text
     
 
-    # this method will stream the answer to the question
-    def get_ollama_stream(self, question: str):
+
+    def get_ollama_stream(self, question: str, prevQuestion: str = ""):
         start = time.time()
 
-        docs = self.retriever.invoke(question)
+        client = weaviate.connect_to_custom(
+            http_host="weaviate",         # your Docker service name or localhost
+            http_port=8080,
+            http_secure=False,
+            grpc_host="weaviate",         # same as http_host if gRPC isn't separately routed
+            grpc_port=50051,
+            grpc_secure=False
+        )
 
-        print(f"FAISS retrieval took: {round(time.time() - start, 2)}s")
+        questions = client.collections.get("NaviBot40")
 
-        context = "\n\n".join(doc.page_content for doc in docs)
-        print(context)
-        prompt = f"""Answer the question using only the information provided below.
-                Context:
-                {context}
+        response = questions.query.near_text(
+                    query=question,
+                    limit=10,
+                 #   distance=0.50,
+                    return_metadata=["distance"]  
+        )
 
-                Question:
-                {question}
+        questions = client.collections.get("NaviBot40")  # This should be the collection where you ingested the data
 
-                Instructions:
-                - Answer the question without adding any introductory or concluding phrases. 
-                - Do not repeat or refer to the context.
-                - If the answer cannot be determined from the context, respond with: "I'm sorry, I don't know." 
-                - Be concise and accurate.
-                - In writing your answer make sure there are no dashes.
-                - Return your response as markdown.
-                - Do not output in a single paragraph.
-                - Use dashes instead of asterisks in the markdown.
-                """
 
-        for chunk in self.llmModel.stream(prompt):
-            yield chunk.content
-            
-    # this method teaches the model to preprocess raw text data
-    def paraphrase_with_ollama(self, raw: str, filename: str = ""):
-        prompt = f"""You are a helpful assistant. Paraphrase the following text to make it **concise, readable, and well-organized**, especially for academic or institutional content.
+        client.close()
+        print("response: ", response)
 
-    Use clear bullet points or headings if needed, but:
-    - Do **not** introduce or explain what you're doing.
-    - Do **not** add summaries like "Here is a paraphrased version".
-    - Do **not** invent section headers like "Calendar Highlights" unless present in the original.
-    - Keep all factual details intact.
-    - Maintain the structure (e.g. semester-wise, event-wise).
-    - Your output should look like a refined version of the original, not a summary.
 
-    Text:
-    \"\"\"
-    {raw}
-    \"\"\"
+        context = "\n\n".join([
+            f"{obj.properties['title'].split(' _ ')[-1]} - Document {i+1}:\n{obj.properties['answer']}  (Distance: {obj.metadata.distance:.4f}):"
+            for i, obj in enumerate(response.objects)
+        ])
 
-    Return only the improved version below:
-    """
+        prompt = f"""
+You are a helpful assistant. Use the documents below to answer the question.
 
-        output = ""
-        for chunk in self.llmModel.stream(prompt):
-            output += chunk.content
-        return output.strip()
+QUESTION:
+{question}
 
+DOCUMENTS:
+{context}
+
+Only use the documents to answer. Be concise and only return the most relevant information. If the answer is not found, say "I apologize, but as of now I cannot respond to your question. But I will be looking into why.".
+"""
+        response = self.chain.predict(input=prompt)
+        print("LLM RESPONSE: ", response )
+        return response

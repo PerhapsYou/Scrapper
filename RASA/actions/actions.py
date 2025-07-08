@@ -7,7 +7,7 @@
 from typing import Any, Text, Dict, List
 from rasa_sdk import Action, Tracker
 from rasa_sdk.executor import CollectingDispatcher
-
+from rasa_sdk.events import SlotSet
 import requests
 import sseclient
 import pymysql
@@ -17,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 # --- FastAPI setup ---
 app = FastAPI()
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -66,23 +67,33 @@ class ActionRAGFallback(Action):
             dispatcher.utter_message(text="You can click the menu icon or type a question.")
             return []
 
+
+        prev_question = tracker.get_slot("prev_question") or ""
+        print("RASA PREVIOUS QUESTION: " + prev_question)
+
         try:
+
             rag_url = "http://rag_server:8000/chat/stream"
             response = requests.post(
                 rag_url,
-                json={"query": user_message},
-                stream=True
+                json={"query": user_message, 
+                    "prevQuestion": prev_question}
             )
 
-            sse_client = sseclient.SSEClient(response)
-            full_answer = ""
-            for event in sse_client.events():
-                if event.data == "[DONE]":
-                    break
-                full_answer += event.data
+            # Get the full answer from the response as a JSON object
+            if response.status_code == 200:  # Check if the request was successful
+                response_json = response.json()
+                full_answer = response_json.get("message", "") 
 
-            dispatcher.utter_message(text=full_answer)
+                # Send the full answer as a message
+                dispatcher.utter_message(text=full_answer)
+            else:
+                # Handle error case
+                dispatcher.utter_message(text="Sorry, there was an issue processing your request.")
+
         except requests.exceptions.RequestException as e:
             dispatcher.utter_message(text=f"Error connecting to RAG service: {str(e)}")
 
-        return []
+        updated_prev = prev_question + "\n " + user_message
+        return [SlotSet("prev_question", updated_prev)]
+        

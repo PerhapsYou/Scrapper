@@ -16,13 +16,19 @@ from scrapers.image_scraper import scan_images
 
 from threading import Lock
 
+
+import weaviate
+from weaviate import WeaviateClient
+from weaviate.classes.config import Configure
+
 #signal when to stop RAG response
 stop_signal = {"stop": False}
 stop_lock = Lock()
 
 # Build Knowledge. Can comment out this section if knowledge already built
-build_vector_index = BuildVectorIndex()
-build_vector_index.build_index()
+#build_vector_index = BuildVectorIndex()
+#build_vector_index.run()
+
 
 
 # Initialize FastAPI app
@@ -31,7 +37,7 @@ app = FastAPI()
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:8080"],  # You can use ["*"] for dev
+    allow_origins=["http://localhost:3000"],  # You can use ["*"] for dev
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -114,6 +120,7 @@ async def stream_response(request: Request):
 
     # Extract query from tracker
     query = body.get("query", "")
+    previousQuestion = body.get("prevQuestion", "")
 
     if not query:
         return JSONResponse(
@@ -125,44 +132,29 @@ async def stream_response(request: Request):
     with stop_lock:
         stop_signal["stop"] = False
         
-    # Token generator will not work when user asks the bot to stop RAG response
-    async def token_generator():
-        for token in rag_pipeline.get_ollama_stream(query):
-            with stop_lock:
-                if stop_signal["stop"]:
-                    break
-            yield f"data: {token}\n\n"
-
-    return StreamingResponse(token_generator(), media_type="text/event-stream")
-
-@app.post("/query")
-async def query(request: Request):
-    body = await request.json()
-    print("Received body:", body) 
-
-    # Extract query from tracker
-    query = body.get("query", "")
-
-    if not query:
-        return JSONResponse(
-            status_code=200,
-            content={"responses": [{"query": "No query found in message."}], "events": []}
-        )
-
+    
     # 👇 RAG PIPELINE IMPLE
     response = rag_pipeline.get_ollama_stream(query)
-    print(response)
-
     if ("I don't know" in response):
-        with open("knowledge/unknown.txt", "w") as file:
-            file.write(query)
+        with open("knowledge/unknown.txt", "a") as file:
+            file.write(query + "\n")
     response = JSONResponse(
         status_code=200,
-        content={"response" : response.get("result", "no answer found.")} 
+        content={"response" : response} 
         )
     print(response)
 
-    return response
+@app.post("/predict")
+async def predict_endpoint(request: Request):
+    body = await request.json()
+    print("reached /predict with the ff body: ", body)
+    reply = rag_pipeline.predict( 
+        message=body.get("message", ""), 
+        distinct_id=body.get("distinct_id",""), 
+        session_id=body.get("session_id", "")
+    )
+    return {"response": reply}
+
 
 #when user clicks on stop button, stop RAG respose
 @app.post("/stop")

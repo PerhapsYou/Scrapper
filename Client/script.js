@@ -16,6 +16,16 @@ class SLUChatbot {
         this.menuOptions = document.getElementById('menuOptions');
         this.isTyping = false;
         this.abortController = null;
+
+        if (!localStorage.getItem("distinct_id")) {
+            localStorage.setItem("distinct_id", crypto.randomUUID());
+        }
+        if (!localStorage.getItem("session_id")) {
+            localStorage.setItem("session_id", crypto.randomUUID());
+        }
+
+        const distinct_id = localStorage.getItem("distinct_id");
+        const session_id = localStorage.getItem("session_id");
     }
 
     async init() {
@@ -25,6 +35,7 @@ class SLUChatbot {
         this.initializeEventListeners();
         this.displayCurrentTime();
         this.initializeWelcomeMessage();
+
     }
     
     
@@ -175,37 +186,32 @@ class SLUChatbot {
     }
 
     
-    async processMessage(message) {
+async processMessage(message) {
     try {
         this.abortController = new AbortController();
         const signal = this.abortController.signal;
 
-        const response = await fetch("http://localhost:5005/webhooks/rest/webhook", {
+        const distinct_id = localStorage.getItem("distinct_id");
+        const session_id = localStorage.getItem("session_id");
+
+        const response = await fetch("http://localhost:8000/predict", { // <-- your custom backend
             method: "POST",
             headers: {
                 "Content-Type": "application/json"
             },
-            body: JSON.stringify({ sender: "user", message }),
+            body: JSON.stringify({
+                message,
+                distinct_id,
+                session_id,
+                source: "rasa-web-client" // optional: for PostHog properties
+            }),
             signal
         });
 
         const data = await response.json();
+        const botReply = data.response;
 
-        // for (const item of data) {
-        //     if (item.text) {
-        //         const rawMarkdown = `
-        // ### Computer Science Subjects
-        // - CSE 10: Advanced Computer Architecture
-        // - CSE 11: Advanced Operating Systems
-        // - CSE 12: Advanced Information Management
-        //         `.trim();
-        
-        //         const parsed = marked.parse(rawMarkdown);
-        //         await this.addBotMessage(parsed);
-        //     }
-        // }
         const fixList = (raw) => {
-            // Ensure each course starts on a new line with "- "
             return raw
                 .split('-')
                 .map(line => line.trim())
@@ -214,24 +220,21 @@ class SLUChatbot {
                 .join('\n');
         };
 
-        for (const item of data) {
-            if (item.text) {
-                const rawMarkdown = item.text.includes("-") ?  fixList(item.text.trim()) : item.text.trim();
-               // await this.addBotMessage(item.text);
-               const parsed = marked.parse(rawMarkdown)
-               await this.addBotMessage(parsed);
-            }
-        }
+        const rawMarkdown = botReply.includes("-") ? fixList(botReply.trim()) : botReply.trim();
+        const parsed = marked.parse(rawMarkdown);
+        await this.addBotMessage(parsed);
 
         this.toggleButtons(false);
         this.isTyping = false;
     } catch (error) {
-        console.error("Error contacting Rasa:", error);
-        //await this.addBotMessage("Sorry, something went wrong.");
+        console.error(error);
+       // await this.addBotMessage("Sorry, something went wrong.");
+        await this.addBotMessage(error);
         this.toggleButtons(false);
         this.isTyping = false;
     }
 }
+
 
 
     

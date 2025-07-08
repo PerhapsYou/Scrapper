@@ -15,6 +15,48 @@ RAW_DIR = "knowledge/txt"
 CLEAN_DIR = "knowledge/cleaned"
 
 class BuildVectorIndex:
+    def run(self):
+
+        #skip scraping for now
+        #=================================================
+        # run_scraper(urls_path="urls.txt", output_dir=DIR, depth=2)
+        # print("Web scraping done.")
+   
+        # scan_all_pdfs()
+        # print("PDF scanning done.")
+
+        # scan_images(folder=DIR)
+        #=================================================
+        
+        # 4. Load all .txt files and build vector index
+        loader = DirectoryLoader(
+            DIR,
+            glob="**/*.txt",
+            loader_cls=lambda path: TextLoader(path, encoding="utf-8")
+        )
+        documents = loader.load()
+
+        if not documents:
+            raise ValueError("No documents found. Please check the directory and file format.")
+
+        #1000 & 200
+        splitter = RecursiveCharacterTextSplitter(    
+            separators=["\n\n", "\n", ".", " "],  # favors logical breaks
+            chunk_size=512,
+            chunk_overlap=50
+        )
+        
+        chunks = splitter.split_documents(documents)
+
+        embedding_model= HuggingFaceEmbeddings(model_name="BAAI/bge-base-en-v1.5")
+        vector_store = FAISS.from_documents(chunks, embedding_model)
+        vector_store.save_local("vector_index")
+
+        print("Vector index built and saved to 'vector_index/'")
+
+if __name__ == "__main__":
+    builder = BuildVectorIndex()
+    builder.run()
     def __init__(self):
         os.makedirs(RAW_DIR, exist_ok=True)
         os.makedirs(CLEAN_DIR, exist_ok=True)
