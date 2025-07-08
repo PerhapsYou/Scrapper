@@ -457,6 +457,18 @@ class AdminPanel {
         this.showStatus('Error saving changes to backend.', 'error');
       }
     }
+  
+  markAsUnsaved() {
+      const saveBtn = document.getElementById('saveAllBtn');
+      saveBtn.textContent = '💾 Save Changes*';
+      saveBtn.classList.add('unsaved');
+  }
+    
+  markAsSaved() {
+      const saveBtn = document.getElementById('saveAllBtn');
+      saveBtn.textContent = '💾 Save Changes';
+      saveBtn.classList.remove('unsaved');
+  }
 
   escapeHtml(text) {
     return text.replace(/[&<>"']/g, function (m) {

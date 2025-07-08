@@ -79,7 +79,7 @@ class SLUChatbot {
 
     document.addEventListener('click', (e) => {
       const mb = e.target.closest('.menu-btn');
-      if (mb) return this.handleMenuSelection(mb.dataset.option);
+      if (mb) return this.handleMenuSelection(mb.dataset.optionId);
 
       const qb = e.target.closest('.quick-btn');
       if (qb) return this.handleQuickAction(qb.dataset.quick);
@@ -149,7 +149,7 @@ class SLUChatbot {
         const data = await response.json();
         const fixList = (raw) => {
             // Ensure each course starts on a new line with "- "
-            //use a bunch of ifs to encapsulate 
+            //use a bunch of ifs to encapsulate  
             return raw
                 .split('-')
                 .map(line => line.trim())
@@ -191,13 +191,15 @@ class SLUChatbot {
     }
     return null;
   }
-  async handleMenuSelection(option) {
-    const item = this.menuData[option];
+  async handleMenuSelection(optionId) {
+    const item = this.menuData.menu.find(m => m.id == optionId);
     if (!item) return;
+
     this.addUserMessage(item.title);
-    await this.addBotMessage(item.content);
+    await this.addBotMessage(item.content);  // Show corresponding content
     this.hideMenuOptions();
   }
+
   async handleQuickAction(action) {
     switch (action) {
             case 'menu':
