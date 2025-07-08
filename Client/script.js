@@ -80,9 +80,18 @@ class SLUChatbot {
         // Menu button clicks
         document.addEventListener('click', (e) => {
             if (e.target.closest('.menu-btn')) {
-                const option = e.target.closest('.menu-btn').dataset.option;
-                this.handleMenuSelection(option);
+                const button = e.target.closest('.menu-btn');
+                const optionId = button.dataset.optionId;
+                const content = button.dataset.content;
+                const title = button.querySelector('.menu-text').textContent;
+
+                (async () => {
+                    this.addUserMessage(title);
+                    await this.addBotMessage(content);  // Use raw HTML directly
+                    this.hideMenuOptions();
+                })();
             }
+
             
             if (e.target.closest('.quick-btn')) {
                 const action = e.target.closest('.quick-btn').dataset.quick;
@@ -160,23 +169,22 @@ class SLUChatbot {
     
     async addBotMessage(content, showMenu = false) {
         await this.showTypingIndicator();
-        
+
         const messageDiv = document.createElement('div');
         messageDiv.className = 'message bot-message';
         messageDiv.innerHTML = `
             <div class="message-content">${content}</div>
             <div class="message-time">${this.getCurrentTime()}</div>
         `;
-        
+
         this.chatMessages.appendChild(messageDiv);
-        
-        if (showMenu) {
-            this.showMenuOptions();
-        }
-        
+
+        if (showMenu) this.showMenuOptions();
+
         this.hideTypingIndicator();
         this.scrollToBottom();
     }
+
     
 async processMessage(message) {
     try {
@@ -237,12 +245,12 @@ async processMessage(message) {
     }
     
     async handleMenuSelection(optionId) {
-    const selected = this.menuData.menu.find(item => item.id == optionId);
-    if (selected) {
-        this.addUserMessage(selected.title);
-        await this.addBotMessage(selected.content);
-        this.hideMenuOptions();
-    }
+        const selected = this.menuData.menu.find(item => item.id == optionId);
+        if (selected) {
+            this.addUserMessage(selected.title);
+            await this.addBotMessage(selected.content);
+            this.hideMenuOptions();
+        }
     }
 
     
@@ -381,15 +389,6 @@ async processMessage(message) {
 document.addEventListener('DOMContentLoaded', async () => {
     window.sluChatbot = new SLUChatbot();
     await window.sluChatbot.init();
-
-    // Admin login redirect
-    const adminBtn = document.getElementById('adminLoginBtn');
-    if (adminBtn) {
-        adminBtn.addEventListener('click', () => {
-            window.location.href = 'admin.html';
-        });
-    }
-    
     window.addEventListener('storage', async (e) => {
         if (e.key === 'slu_chatbot_menu') {
             await window.sluChatbot.refreshMenuData();

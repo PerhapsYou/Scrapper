@@ -13,6 +13,9 @@ import requests, json, time, os
 import weaviate
 from weaviate import WeaviateClient
 from weaviate.classes.config import Configure
+import time
+import textwrap # for paraphrasing the knowledge base
+
 
 llmModel = None  # Initialize llmModel to be used later in the class
 
@@ -235,6 +238,3 @@ Only use the documents to answer. Be concise and only return the most relevant i
         response = self.chain.predict(input=prompt)
         print("LLM RESPONSE: ", response )
         return response
-
-
-        

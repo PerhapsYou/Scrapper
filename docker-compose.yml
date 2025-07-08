@@ -8,6 +8,7 @@ services:
     volumes:
       - ./RAG:/app
       - ./RAG/knowledge:/app/knowledge
+      - ./Client:/app/Client
     networks:
       - chatbot_network
 
